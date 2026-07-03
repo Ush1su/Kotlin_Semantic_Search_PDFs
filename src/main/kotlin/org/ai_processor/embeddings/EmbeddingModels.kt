@@ -13,14 +13,7 @@ data class PdfChunk(
     val pageStart: Int,
     val pageEnd: Int,
 
-    val wordRefs: List<WordTokenRef>,
     val highlightRects: List<HighlightRect>
-)
-
-data class WordTokenRef(
-    val pageNumber: Int,
-    val blockIndex: Int,
-    val wordIndex: Int
 )
 
 data class HighlightRect(

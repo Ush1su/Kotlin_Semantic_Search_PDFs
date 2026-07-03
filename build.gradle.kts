@@ -11,6 +11,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation("org.apache.pdfbox:pdfbox:3.0.7")
 }
 
 kotlin {
