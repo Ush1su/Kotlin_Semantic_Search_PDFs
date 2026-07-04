@@ -29,28 +29,33 @@ class PDFParser {
         )
     }
 
-    private fun buildParsedPage(pageNumber: Int, width: Float, height: Float, text: String, rawPieces: List<RawTextPiece>) : ParsedPage{
-        val rawLines: Map<Float, List<RawTextPiece>> = rawPieces
-            .groupBy { it.y }
-            .toSortedMap()
-            .mapValues { (_, pieces) ->
-                pieces.sortedBy { it.x }
-            }
+    private fun buildParsedPage(
+        pageNumber: Int,
+        width: Float,
+        height: Float,
+        text: String, rawPieces: List<RawTextPiece>
+    ) : ParsedPage{
+        val rawLines: List<List<RawTextPiece>> = groupByApproximateY(rawPieces, tolerance = 2.0f)
 
-        val textBlocks: MutableList<TextBlock> = mutableListOf()
-        rawLines.entries.forEachIndexed { index, (y, pieces) ->
+        val textBlocks = rawLines.mapIndexed { index, pieces ->
             val text = pieces.joinToString(separator = "") { it.value }
-            val lineWidth: Float = pieces.fold(0f) { acc, piece ->
-                acc + piece.x
-            }
-            val lineHeight = pieces.maxOf { it.height }
-            val bbox = BoundingBox(pieces[0].x, y, lineWidth, lineHeight)
-            textBlocks.add(TextBlock(
+
+            val minX = pieces.minOf { it.x }
+            val maxX = pieces.maxOf { it.x + it.width }
+            val minY = pieces.minOf { it.y }
+            val maxY = pieces.maxOf { it.y + it.height }
+            val bbox = BoundingBox(
+                x = minX,
+                y = minY,
+                width = maxX - minX,
+                height = maxY - minY
+            )
+            TextBlock(
                 blockIndex = index,
                 pageNumber = pageNumber,
                 text = text,
                 bbox = bbox
-            ))
+            )
         }
 
         return ParsedPage(
@@ -59,5 +64,30 @@ class PDFParser {
             height = height,
             textBlocks = textBlocks
         )
+    }
+
+    private fun groupByApproximateY(
+        pieces: List<RawTextPiece>,
+        tolerance: Float = 2.0f
+    ): List<List<RawTextPiece>> {
+        val sorted = pieces.sortedWith(compareBy<RawTextPiece> { it.y }.thenBy { it.x })
+
+        val lines = mutableListOf<MutableList<RawTextPiece>>()
+
+        for (piece in sorted) {
+            val line = lines.firstOrNull { existingLine ->
+                kotlin.math.abs(existingLine.first().y - piece.y) <= tolerance
+            }
+
+            if (line != null) {
+                line.add(piece)
+            } else {
+                lines.add(mutableListOf(piece))
+            }
+        }
+
+        return lines.map { line ->
+            line.sortedBy { it.x }
+        }
     }
 }
