@@ -3,6 +3,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.3.21"
     kotlin("plugin.spring") version "2.2.21"
+    kotlin("plugin.jpa") version "2.3.21"
 }
 
 group = "org.example"
@@ -20,11 +21,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    runtimeOnly("com.h2database:h2")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jdbc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    implementation(kotlin("stdlib"))
 }
 
 kotlin {

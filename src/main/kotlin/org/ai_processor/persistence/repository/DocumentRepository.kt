@@ -1,0 +1,13 @@
+package org.ai_processor.persistence.repository
+
+import org.ai_processor.persistence.model.DocumentEntity
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
+import java.util.UUID
+
+@Repository
+interface DocumentRepository : JpaRepository<DocumentEntity, UUID> {
+    fun findByOriginalFilenameContainingIgnoreCase(
+        originalFilename: String
+    ): List<DocumentEntity>
+}
