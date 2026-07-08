@@ -1,4 +1,7 @@
 spring:
+  app:
+    storage:
+      local-root: ./data/uploads
   config:
     import: optional:file:.env[.properties]
 

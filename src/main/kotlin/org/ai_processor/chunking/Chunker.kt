@@ -1,4 +1,4 @@
-package org.ai_processor.embeddings
+package org.ai_processor.chunking
 
 import org.ai_processor.pdfreader.ParsedPDF
 import org.ai_processor.pdfreader.TextBlock

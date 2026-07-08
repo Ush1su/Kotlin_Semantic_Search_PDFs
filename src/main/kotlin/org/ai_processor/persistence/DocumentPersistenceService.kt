@@ -1,6 +1,5 @@
 package org.ai_processor.persistence
 
-import com.sun.org.apache.xerces.internal.util.DOMUtil.getDocument
 import org.ai_processor.persistence.model.DocumentChunkEntity
 import org.ai_processor.persistence.model.DocumentEntity
 import org.ai_processor.persistence.model.DocumentStatus
@@ -60,5 +59,10 @@ class DocumentPersistenceService(
     fun deleteDocumentData(documentId: UUID) {
         documentChunkRepository.deleteByDocumentId(documentId)
         documentRepository.deleteById(documentId)
+    }
+
+    @Transactional(readOnly = true)
+    fun getChunksByDocumentId(documentId: UUID): List<DocumentChunkEntity> {
+        return documentChunkRepository.findByDocumentIdOrderByChunkIndex(documentId)
     }
 }

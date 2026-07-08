@@ -4,9 +4,11 @@ import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.text.PDFTextStripper
+import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.util.UUID
 
+@Service
 class PDFParser {
     fun parse(filepath: Path): ParsedPDF {
         val pages = mutableListOf<ParsedPage>()

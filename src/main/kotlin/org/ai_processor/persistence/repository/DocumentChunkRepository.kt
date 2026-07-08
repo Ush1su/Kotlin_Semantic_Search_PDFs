@@ -11,4 +11,5 @@ interface DocumentChunkRepository : JpaRepository<DocumentChunkEntity, UUID> {
     fun findByDocumentId(documentId: UUID): List<DocumentChunkEntity>
     fun deleteByDocumentId(documentId: UUID)
     fun findByIdIn(documentIds: Collection<UUID>): List<DocumentChunkEntity>
+    fun findByDocumentIdOrderByChunkIndex(documentId: UUID): List<DocumentChunkEntity>
 }

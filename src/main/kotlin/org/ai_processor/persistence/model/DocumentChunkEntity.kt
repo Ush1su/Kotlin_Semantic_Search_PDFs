@@ -5,7 +5,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
-import org.ai_processor.embeddings.HighlightRect
+import org.ai_processor.chunking.HighlightRect
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import java.util.UUID
