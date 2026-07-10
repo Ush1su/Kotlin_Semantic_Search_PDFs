@@ -3,7 +3,7 @@ spring:
     storage:
       local-root: ./data/uploads
   config:
-    import: optional:file:.env[.properties]
+    import: optional:file:./app.env[.properties]
 
   datasource:
     url: ${DB_URL}

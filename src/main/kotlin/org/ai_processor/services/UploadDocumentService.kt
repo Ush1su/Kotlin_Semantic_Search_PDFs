@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.time.Instant
 import java.util.UUID
+import org.slf4j.LoggerFactory
 
 
 @Service
@@ -16,6 +17,7 @@ class UploadDocumentService(
     private val documentPersistenceService: DocumentPersistenceService,
     private val processDocumentService: ProcessDocumentService
 ) {
+    private val logger = LoggerFactory.getLogger(UploadDocumentService::class.java)
 
     fun upload(file: MultipartFile): UUID {
         require(!file.isEmpty) { "File is empty" }
@@ -42,6 +44,7 @@ class UploadDocumentService(
             status = DocumentStatus.UPLOADED
         )
         documentPersistenceService.saveDocument(documentEntity)
+        logger.info("Document uploaded: $documentId")
         processDocumentService.process(documentId, storagePath)
 
         return documentId

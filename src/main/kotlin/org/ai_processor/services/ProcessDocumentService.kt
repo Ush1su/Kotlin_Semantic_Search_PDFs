@@ -5,6 +5,7 @@ import org.ai_processor.persistence.DocumentPersistenceService
 import org.ai_processor.persistence.model.DocumentChunkEntity
 import org.ai_processor.storage.FileStorage
 import org.ai_processor.pdfreader.PDFParser
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.util.UUID
@@ -12,10 +13,11 @@ import java.util.UUID
 @Service
 class ProcessDocumentService(
     private val documentPersistenceService: DocumentPersistenceService,
-    private val fileStorage: FileStorage,
     private val pdfParser: PDFParser,
     private val chunker: Chunker
 ) {
+
+    private val logger = LoggerFactory.getLogger(ProcessDocumentService::class.java)
 
     fun process(documentId: UUID, storagePathString: String) {
         try {
@@ -38,6 +40,7 @@ class ProcessDocumentService(
             documentPersistenceService.saveChunks(chunkEntities)
             documentPersistenceService.markReady(documentId)
         } catch (e: Exception) {
+            logger.error("Error processing document: $documentId", e)
             documentPersistenceService.markFailed(documentId, e.message)
             throw e
         }

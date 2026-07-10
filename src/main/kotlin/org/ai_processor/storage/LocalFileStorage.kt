@@ -20,7 +20,7 @@ class LocalFileStorage(
         val documentDir = Path.of(localRoot, documentId.toString())
         Files.createDirectories(documentDir)
 
-        val filePath = documentDir.resolve("original.pdf")
+        val filePath = documentDir.resolve(originalFilename)
         Files.write(filePath, bytes)
 
         return filePath.toString()
