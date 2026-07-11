@@ -62,6 +62,12 @@ class DocumentPersistenceService(
     }
 
     @Transactional(readOnly = true)
+    fun getStoragePath(documentId: UUID): String {
+        val document = documentRepository.findByIdOrNull(documentId) ?: throw DocumentNotFoundException(documentId)
+        return document.storagePath
+    }
+
+    @Transactional(readOnly = true)
     fun getChunksByDocumentId(documentId: UUID): List<DocumentChunkEntity> {
         return documentChunkRepository.findByDocumentIdOrderByChunkIndex(documentId)
     }

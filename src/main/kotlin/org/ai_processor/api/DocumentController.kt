@@ -1,6 +1,7 @@
 package org.ai_processor.api
 
-import org.ai_processor.services.UploadDocumentService
+import org.ai_processor.persistence.DocumentNotFoundException
+import org.ai_processor.services.DocumentService
 import org.ai_processor.persistence.DocumentPersistenceService
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -10,7 +11,7 @@ import java.util.UUID
 @RestController
 @RequestMapping("/documents")
 class DocumentController(
-    private val uploadDocumentService: UploadDocumentService,
+    private val documentService: DocumentService,
     private val documentPersistenceService: DocumentPersistenceService
 ) {
 
@@ -20,7 +21,7 @@ class DocumentController(
         @RequestParam("file") file: MultipartFile
     ): DocumentUploadResponse {
         val documentId = try {
-            uploadDocumentService.upload(file)
+            documentService.upload(file)
         } catch (_: Exception) {
             return DocumentUploadResponse(
                 documentId = null,
@@ -69,5 +70,13 @@ class DocumentController(
                     pageEnd = chunk.pageEnd
                 )
             }
+    }
+
+    @DeleteMapping("/{documentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteDocument(
+        @PathVariable documentId: UUID
+    ) {
+        documentService.delete(documentId)
     }
 }

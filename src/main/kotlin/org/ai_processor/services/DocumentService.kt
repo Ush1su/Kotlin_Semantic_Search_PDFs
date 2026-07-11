@@ -12,12 +12,12 @@ import org.slf4j.LoggerFactory
 
 
 @Service
-class UploadDocumentService(
+class DocumentService(
     private val fileStorage: FileStorage,
     private val documentPersistenceService: DocumentPersistenceService,
     private val processDocumentService: ProcessDocumentService
 ) {
-    private val logger = LoggerFactory.getLogger(UploadDocumentService::class.java)
+    private val logger = LoggerFactory.getLogger(DocumentService::class.java)
 
     fun upload(file: MultipartFile): UUID {
         require(!file.isEmpty) { "File is empty" }
@@ -48,5 +48,12 @@ class UploadDocumentService(
         processDocumentService.process(documentId, storagePath)
 
         return documentId
+    }
+
+    fun delete(documentId: UUID) {
+        val storagePath = documentPersistenceService.getStoragePath(documentId)
+
+        fileStorage.delete(storagePath)
+        documentPersistenceService.deleteDocumentData(documentId)
     }
 }
