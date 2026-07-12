@@ -1,4 +1,4 @@
-package org.ai_processor.pdfreader
+package org.ai_processor.processing.pdfreader
 
 import java.util.UUID
 

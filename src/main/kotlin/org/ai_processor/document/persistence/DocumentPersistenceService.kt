@@ -1,10 +1,10 @@
-package org.ai_processor.persistence
+package org.ai_processor.document.persistence
 
-import org.ai_processor.persistence.model.DocumentChunkEntity
-import org.ai_processor.persistence.model.DocumentEntity
-import org.ai_processor.persistence.model.DocumentStatus
-import org.ai_processor.persistence.repository.DocumentChunkRepository
-import org.ai_processor.persistence.repository.DocumentRepository
+import org.ai_processor.document.persistence.model.DocumentChunkEntity
+import org.ai_processor.document.persistence.model.DocumentEntity
+import org.ai_processor.document.persistence.model.DocumentStatus
+import org.ai_processor.document.persistence.repository.DocumentChunkRepository
+import org.ai_processor.document.persistence.repository.DocumentRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

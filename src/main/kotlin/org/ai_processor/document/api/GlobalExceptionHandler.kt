@@ -1,6 +1,6 @@
-package org.ai_processor.api
+package org.ai_processor.document.api
 
-import org.ai_processor.persistence.DocumentNotFoundException
+import org.ai_processor.document.persistence.DocumentNotFoundException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler

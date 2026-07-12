@@ -25,5 +25,10 @@ app:
     use-tls: ${QDRANT_USE_TLS:false}
     collection-name: ${QDRANT_COLLECTION_NAME:chunks}
 
+  embedding:
+    base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
+    model: ${EMBEDDING_MODEL:qwen3-embedding:0.6b}
+    dimensions: ${EMBEDDING_DIMENSIONS:1024}
+
 server:
   port: 8080

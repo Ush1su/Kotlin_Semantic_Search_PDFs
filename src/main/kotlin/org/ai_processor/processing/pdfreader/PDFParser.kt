@@ -1,12 +1,11 @@
-package org.ai_processor.pdfreader
+package org.ai_processor.processing.pdfreader
 
 import org.apache.pdfbox.Loader
-import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
-import org.apache.pdfbox.text.PDFTextStripper
 import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.util.UUID
+import kotlin.math.abs
 
 @Service
 class PDFParser {
@@ -78,7 +77,7 @@ class PDFParser {
 
         for (piece in sorted) {
             val line = lines.firstOrNull { existingLine ->
-                kotlin.math.abs(existingLine.first().y - piece.y) <= tolerance
+                abs(existingLine.first().y - piece.y) <= tolerance
             }
 
             if (line != null) {

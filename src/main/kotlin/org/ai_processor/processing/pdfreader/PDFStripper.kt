@@ -1,4 +1,4 @@
-package org.ai_processor.pdfreader
+package org.ai_processor.processing.pdfreader
 
 import org.apache.pdfbox.text.PDFTextStripper
 import org.apache.pdfbox.text.TextPosition

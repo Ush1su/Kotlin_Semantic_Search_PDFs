@@ -1,8 +1,8 @@
-package org.ai_processor.services
+package org.ai_processor.document.services
 
-import org.ai_processor.persistence.DocumentPersistenceService
-import org.ai_processor.persistence.model.DocumentEntity
-import org.ai_processor.persistence.model.DocumentStatus
+import org.ai_processor.document.persistence.DocumentPersistenceService
+import org.ai_processor.document.persistence.model.DocumentEntity
+import org.ai_processor.document.persistence.model.DocumentStatus
 import org.ai_processor.storage.FileStorage
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile

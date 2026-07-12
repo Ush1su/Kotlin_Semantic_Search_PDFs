@@ -1,6 +1,6 @@
-package org.ai_processor.persistence.repository
+package org.ai_processor.document.persistence.repository
 
-import org.ai_processor.persistence.model.DocumentChunkEntity
+import org.ai_processor.document.persistence.model.DocumentChunkEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID

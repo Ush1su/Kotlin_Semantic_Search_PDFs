@@ -1,4 +1,4 @@
-package org.ai_processor.persistence.model
+package org.ai_processor.document.persistence.model
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

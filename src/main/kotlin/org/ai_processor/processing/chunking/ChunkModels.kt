@@ -1,6 +1,6 @@
-package org.ai_processor.chunking
+package org.ai_processor.processing.chunking
 
-import org.ai_processor.pdfreader.BoundingBox
+import org.ai_processor.processing.pdfreader.BoundingBox
 import java.util.UUID
 
 data class PdfChunk(

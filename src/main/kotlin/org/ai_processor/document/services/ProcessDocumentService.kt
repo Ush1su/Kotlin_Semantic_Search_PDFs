@@ -1,10 +1,9 @@
-package org.ai_processor.services
+package org.ai_processor.document.services
 
-import org.ai_processor.chunking.Chunker
-import org.ai_processor.persistence.DocumentPersistenceService
-import org.ai_processor.persistence.model.DocumentChunkEntity
-import org.ai_processor.storage.FileStorage
-import org.ai_processor.pdfreader.PDFParser
+import org.ai_processor.processing.chunking.Chunker
+import org.ai_processor.document.persistence.DocumentPersistenceService
+import org.ai_processor.document.persistence.model.DocumentChunkEntity
+import org.ai_processor.processing.pdfreader.PDFParser
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.file.Path

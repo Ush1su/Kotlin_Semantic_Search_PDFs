@@ -1,4 +1,4 @@
-package org.ai_processor.api
+package org.ai_processor.document.api
 
 import java.util.UUID
 

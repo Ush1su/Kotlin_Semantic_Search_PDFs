@@ -1,4 +1,4 @@
-package org.ai_processor.persistence
+package org.ai_processor.document.persistence
 
 import java.util.UUID
 

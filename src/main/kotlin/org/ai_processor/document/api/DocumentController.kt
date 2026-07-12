@@ -1,8 +1,7 @@
-package org.ai_processor.api
+package org.ai_processor.document.api
 
-import org.ai_processor.persistence.DocumentNotFoundException
-import org.ai_processor.services.DocumentService
-import org.ai_processor.persistence.DocumentPersistenceService
+import org.ai_processor.document.services.DocumentService
+import org.ai_processor.document.persistence.DocumentPersistenceService
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
