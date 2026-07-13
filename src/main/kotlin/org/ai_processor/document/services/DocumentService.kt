@@ -46,7 +46,7 @@ class DocumentService(
         documentPersistenceService.saveDocument(documentEntity)
         logger.info("Document uploaded: $documentId")
         processDocumentService.process(documentId, storagePath)
-
+        logger.info("Document processing started: $documentId")
         return documentId
     }
 

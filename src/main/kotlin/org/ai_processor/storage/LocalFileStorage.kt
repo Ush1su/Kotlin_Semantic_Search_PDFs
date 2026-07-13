@@ -9,7 +9,7 @@ import java.nio.file.Path
 
 @Service
 class LocalFileStorage(
-    @Value("\${spring.app.storage.local-root}")
+    @Value("\${app.storage.local-root}")
     private val localRoot: String
 ) : FileStorage {
     override fun save(

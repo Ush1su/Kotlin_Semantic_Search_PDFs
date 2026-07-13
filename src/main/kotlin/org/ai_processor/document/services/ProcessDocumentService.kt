@@ -3,8 +3,10 @@ package org.ai_processor.document.services
 import org.ai_processor.processing.chunking.Chunker
 import org.ai_processor.document.persistence.DocumentPersistenceService
 import org.ai_processor.document.persistence.model.DocumentChunkEntity
+import org.ai_processor.processing.embeddings.EmbeddingService
 import org.ai_processor.processing.pdfreader.PDFParser
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.util.UUID
@@ -12,12 +14,14 @@ import java.util.UUID
 @Service
 class ProcessDocumentService(
     private val documentPersistenceService: DocumentPersistenceService,
+    private val embeddingService: EmbeddingService,
     private val pdfParser: PDFParser,
     private val chunker: Chunker
 ) {
 
     private val logger = LoggerFactory.getLogger(ProcessDocumentService::class.java)
 
+    @Async("documentProcessingExecutor")
     fun process(documentId: UUID, storagePathString: String) {
         try {
             documentPersistenceService.markProcessing(documentId)
