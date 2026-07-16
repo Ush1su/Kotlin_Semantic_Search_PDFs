@@ -6,6 +6,7 @@ data class OllamaEmbeddingRequest(
     val model: String,
     val input: List<String>,
     val truncate: Boolean,
+    val dimensions: Int = 512
 )
 
 data class OllamaEmbeddingResponse(

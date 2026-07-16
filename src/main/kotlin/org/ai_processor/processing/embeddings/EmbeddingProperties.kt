@@ -9,4 +9,5 @@ data class EmbeddingProperties(
     val model: String,
     val batchSize: Int = 32,
     val truncate: Boolean = false,
+    val dimensions: Int = 512
 )

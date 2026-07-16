@@ -24,6 +24,7 @@ app:
     port: ${QDRANT_PORT:6334}
     use-tls: ${QDRANT_USE_TLS:false}
     collection-name: ${QDRANT_COLLECTION_NAME:chunks}
+    vector-size: ${EMBEDDING_DIMENSIONS:512}
 
   embedding:
     base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}

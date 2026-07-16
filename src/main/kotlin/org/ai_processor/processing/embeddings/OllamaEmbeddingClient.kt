@@ -28,6 +28,7 @@ class OllamaEmbeddingClient(
             model = properties.model,
             input = texts,
             truncate = properties.truncate,
+            dimensions = properties.dimensions,
         )
 
         val response = try {
