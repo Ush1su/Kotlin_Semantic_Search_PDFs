@@ -14,6 +14,7 @@ data class OllamaEmbeddingResponse(
 
 data class EmbeddedChunk(
     val chunkId: UUID,
+    val text: String,
     val documentId: UUID,
     val vector: List<Float>,
 )

@@ -31,6 +31,7 @@ class EmbeddingService (
         return chunks.zip(embeddings).map { (chunk, embedding) ->
             EmbeddedChunk(
                 chunkId = chunk.id,
+                text = chunk.text,
                 documentId = chunk.documentId,
                 vector = embedding,
             )

@@ -7,6 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class EmbeddingProperties(
     val baseUrl: String,
     val model: String,
-    val batchSize: Int = 16,
+    val batchSize: Int = 32,
     val truncate: Boolean = false,
 )
