@@ -1,5 +1,6 @@
-package org.ai_processor.document.api
+package org.ai_processor.document.api.model
 
+import org.ai_processor.document.persistence.model.DocumentStatus
 import java.util.UUID
 
 data class DocumentUploadResponse(
@@ -13,7 +14,7 @@ data class DocumentResponse(
     val contentType: String,
     val fileSizeBytes: Long,
     val storagePath: String,
-    val status: String,
+    val status: DocumentStatus,
     val errorMessage: String?,
     val createdAt: String,
     val processedAt: String?

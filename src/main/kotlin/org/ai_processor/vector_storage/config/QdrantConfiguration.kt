@@ -1,4 +1,4 @@
-package org.ai_processor.vector_storage
+package org.ai_processor.vector_storage.config
 
 import io.qdrant.client.QdrantClient
 import io.qdrant.client.QdrantGrpcClient

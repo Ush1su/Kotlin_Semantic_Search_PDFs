@@ -1,5 +1,4 @@
-package org.ai_processor.processing.embeddings
-
+package org.ai_processor.processing.embeddings.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

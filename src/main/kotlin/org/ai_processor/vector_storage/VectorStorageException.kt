@@ -9,3 +9,8 @@ class VectorStorageInterruptedException(
     message: String,
     cause: Throwable
 ) : VectorStorageException(message, cause)
+
+class VectorStorageSearchException(
+    message: String,
+    cause: Throwable? = null
+) : VectorStorageException(message, cause)

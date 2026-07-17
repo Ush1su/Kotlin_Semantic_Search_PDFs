@@ -9,9 +9,13 @@ import io.qdrant.client.VectorsFactory.vectors
 import org.springframework.stereotype.Service
 import io.qdrant.client.PointIdFactory.id
 import io.qdrant.client.grpc.Common.Filter
-import io.qdrant.client.grpc.Points
 import io.qdrant.client.grpc.Points.PointStruct
 import io.qdrant.client.grpc.Points.UpdateResult
+import org.ai_processor.vector_storage.config.QdrantProperties
+import org.ai_processor.vector_storage.model.VectorSearchMatch
+import io.qdrant.client.grpc.Points.ScoredPoint
+import io.qdrant.client.grpc.Points.SearchPoints
+import io.qdrant.client.grpc.Points.WithPayloadSelector
 import java.util.UUID
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
@@ -28,7 +32,7 @@ class QdrantService(
         chunks
             .chunked(properties.batchSize)
             .forEach { batch ->
-                executeQdrantOperation(
+                executeQdrantOperation<UpdateResult>(
                     operationName = "save ${batch.size} chunks"
                 ) {
                     qdrantClient.upsertAsync(
@@ -59,6 +63,84 @@ class QdrantService(
         }
     }
 
+    override fun searchByVector(
+        vector: List<Float>,
+        limit: Int,
+        minimumScore: Float?
+    ): List<VectorSearchMatch> {
+        validateSearchArguments(vector, limit, minimumScore)
+        val request = SearchPoints.newBuilder()
+            .setCollectionName(properties.collectionName)
+            .addAllVector(vector)
+            .setLimit(limit.toLong())
+            .setWithPayload(
+                WithPayloadSelector.newBuilder()
+                    .setEnable(true)
+                    .build()
+            )
+            .apply {
+                minimumScore?.let(::setScoreThreshold)
+            }
+            .build()
+        return executeQdrantOperation(
+            operationName = "search for $limit nearest chunks"
+        ) {
+            qdrantClient.searchAsync(request)
+        }.map(::toVectorSearchMatch)
+    }
+
+    private fun toVectorSearchMatch(
+        point: ScoredPoint
+    ): VectorSearchMatch {
+        val chunkId = point.id.uuid
+            .takeIf {it.isNotBlank()}
+            ?.let(UUID::fromString)
+            ?: throw VectorStorageSearchException("Qdrant search result has no valid chunk UUID")
+
+        val documentId = UUID.fromString(
+            requiredPayloadString(point, DOCUMENT_ID_PAYLOAD)
+        )
+
+        return VectorSearchMatch(
+            chunkId = chunkId,
+            documentId = documentId,
+            text = requiredPayloadString(point, TEXT_PAYLOAD),
+            score = point.score
+        )
+    }
+
+    private fun requiredPayloadString(
+        point: ScoredPoint,
+        key: String
+    ): String {
+        return point.payloadMap[key]
+            ?.stringValue
+            ?.takeIf { it.isNotBlank() }
+            ?: throw VectorStorageSearchException(
+                "Qdrant search result is missing '$key' payload"
+            )
+    }
+
+    private fun validateSearchArguments(
+        vector: List<Float>,
+        limit: Int,
+        minimumScore: Float?
+    ) {
+        if (vector.size.toLong() != properties.vectorSize) {
+            throw VectorStorageException(
+                "Search vector size ${vector.size} does not match. Qdrant vector size ${properties.vectorSize}"
+            )
+        }
+
+        require(limit > 0) {
+            "Search limit must be greater than zero"
+        }
+
+        require(minimumScore == null || minimumScore.isFinite()) {
+            "Minimum score must be a finite number"
+        }
+    }
+
     private fun validateChunks(chunks: List<EmbeddedChunk>) {
         chunks.forEach { chunk ->
             if (chunk.vector.size.toLong() != properties.vectorSize) {
@@ -67,12 +149,12 @@ class QdrantService(
         }
     }
 
-    private fun executeQdrantOperation(
+    private fun <T> executeQdrantOperation(
         operationName: String,
-        operation: () -> ListenableFuture<UpdateResult>
-    ) {
+        operation: () -> ListenableFuture<T>
+    ): T {
         try {
-            operation().get()
+            return operation().get()
         } catch (exception: InterruptedException) {
             Thread.currentThread().interrupt()
 

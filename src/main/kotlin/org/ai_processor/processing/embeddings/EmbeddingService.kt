@@ -1,6 +1,7 @@
 package org.ai_processor.processing.embeddings
 
 import org.ai_processor.processing.chunking.PdfChunk
+import org.ai_processor.processing.embeddings.config.EmbeddingProperties
 import org.springframework.stereotype.Service
 
 @Service
@@ -36,5 +37,8 @@ class EmbeddingService (
                 vector = embedding,
             )
         }
+    }
+    fun embedText(text: String) : List<Float> {
+        return embeddingClient.embed(listOf(text)).first()
     }
 }

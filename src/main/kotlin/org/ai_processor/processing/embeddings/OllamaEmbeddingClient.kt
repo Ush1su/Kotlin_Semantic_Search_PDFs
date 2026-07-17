@@ -1,6 +1,6 @@
 package org.ai_processor.processing.embeddings
 
-import org.ai_processor.processing.chunking.PdfChunk
+import org.ai_processor.processing.embeddings.config.EmbeddingProperties
 import org.springframework.stereotype.Component
 import org.springframework.http.MediaType
 import org.springframework.web.client.RestClient

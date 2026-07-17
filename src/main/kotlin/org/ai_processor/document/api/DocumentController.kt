@@ -1,5 +1,8 @@
 package org.ai_processor.document.api
 
+import org.ai_processor.document.api.model.DocumentChunkResponse
+import org.ai_processor.document.api.model.DocumentResponse
+import org.ai_processor.document.api.model.DocumentUploadResponse
 import org.ai_processor.document.services.DocumentService
 import org.ai_processor.document.persistence.DocumentPersistenceService
 import org.springframework.http.HttpStatus
@@ -47,7 +50,7 @@ class DocumentController(
             contentType = document.contentType,
             fileSizeBytes = document.fileSizeBytes,
             storagePath = document.storagePath,
-            status = document.status.name,
+            status = document.status,
             errorMessage = document.errorMessage,
             createdAt = document.createdAt.toString(),
             processedAt = document.processedAt?.toString()

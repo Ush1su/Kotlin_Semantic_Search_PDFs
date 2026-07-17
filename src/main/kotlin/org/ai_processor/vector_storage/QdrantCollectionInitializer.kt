@@ -3,6 +3,7 @@ package org.ai_processor.vector_storage
 import io.qdrant.client.QdrantClient
 import io.qdrant.client.grpc.Collections.Distance
 import io.qdrant.client.grpc.Collections.VectorParams
+import org.ai_processor.vector_storage.config.QdrantProperties
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
