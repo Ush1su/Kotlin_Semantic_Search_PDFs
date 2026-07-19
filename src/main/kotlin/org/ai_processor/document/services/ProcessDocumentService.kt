@@ -28,7 +28,7 @@ class ProcessDocumentService(
         try {
             documentPersistenceService.markProcessing(documentId)
             val storagePath = Path.of(storagePathString)
-            val parsedPdf = pdfParser.parse(storagePath)
+            val parsedPdf = pdfParser.parse(storagePath, documentId)
 
             val chunks = chunker.chunkPDF(parsedPdf)
             val chunkEntities = chunks.map { chunk ->

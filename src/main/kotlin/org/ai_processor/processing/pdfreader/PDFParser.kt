@@ -9,7 +9,7 @@ import kotlin.math.abs
 
 @Service
 class PDFParser {
-    fun parse(filepath: Path): ParsedPDF {
+    fun parse(filepath: Path, documentId: UUID): ParsedPDF {
         val pages = mutableListOf<ParsedPage>()
         Loader.loadPDF(filepath.toFile()).use { document ->
             for (pageIndex in 0 until document.numberOfPages) {
@@ -21,11 +21,11 @@ class PDFParser {
                 val stripper = PDFStripper(pageNumber)
                 val text = stripper.getText(document)
                 val rawPieces = stripper.textPieces
-                pages.add(buildParsedPage(pageNumber, width, height, text, rawPieces))
+                pages.add(buildParsedPage(pageNumber, width, height, rawPieces))
             }
         }
         return ParsedPDF(
-            documentId = UUID.randomUUID(),
+            documentId = documentId,
             pages = pages
         )
     }
@@ -34,7 +34,7 @@ class PDFParser {
         pageNumber: Int,
         width: Float,
         height: Float,
-        text: String, rawPieces: List<RawTextPiece>
+        rawPieces: List<RawTextPiece>
     ) : ParsedPage{
         val rawLines: List<List<RawTextPiece>> = groupByApproximateY(rawPieces, tolerance = 2.0f)
 

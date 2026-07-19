@@ -8,9 +8,10 @@ import java.util.UUID
 import kotlin.collections.ArrayDeque
 
 @Component
-class Chunker {
-    private val maxChunkSize = 1000
-    private val maxChunkOverlap = 200
+class Chunker(
+    private val maxChunkSize: Int = DEFAULT_MAX_CHUNK_SIZE,
+    private val maxChunkOverlap: Int = DEFAULT_MAX_CHUNK_OVERLAP
+) {
 
     fun chunkPDF(parsedPDF: ParsedPDF): List<PdfChunk> {
         var currentChunkSize = 0
@@ -19,7 +20,7 @@ class Chunker {
         var chunkIndex = 1
         for (page in parsedPDF.pages) {
             for (textBlock in page.textBlocks) {
-                if (currentChunkSize + textBlock.text.length > maxChunkSize) {
+                if (currentTextBlocks.isNotEmpty() && currentChunkSize + textBlock.text.length > maxChunkSize) {
                     chunks.add(buildPdfChunk(parsedPDF.documentId, chunkIndex, currentTextBlocks))
                     chunkIndex += 1
                     while (currentChunkSize > maxChunkOverlap) {
@@ -31,7 +32,9 @@ class Chunker {
                 currentChunkSize += textBlock.text.length
             }
         }
-        chunks.add(buildPdfChunk(parsedPDF.documentId, chunkIndex, currentTextBlocks))
+        if (currentTextBlocks.isNotEmpty()) {
+            chunks.add(buildPdfChunk(parsedPDF.documentId, chunkIndex, currentTextBlocks))
+        }
         return chunks
     }
 
@@ -52,5 +55,10 @@ class Chunker {
             pageEnd = currentTextBlocks.last().pageNumber,
             highlightRects = highlightRectangles
         )
+    }
+
+    private companion object {
+        const val DEFAULT_MAX_CHUNK_SIZE = 1000
+        const val DEFAULT_MAX_CHUNK_OVERLAP = 200
     }
 }
