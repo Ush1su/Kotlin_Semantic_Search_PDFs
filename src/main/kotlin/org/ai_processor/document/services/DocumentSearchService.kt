@@ -1,7 +1,7 @@
 package org.ai_processor.document.services
 
 import org.ai_processor.processing.embeddings.EmbeddingService
-import org.ai_processor.vector_storage.QdrantService
+import org.ai_processor.vector_storage.VectorStorage
 import org.ai_processor.vector_storage.model.VectorSearchMatch
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service
 @Service
 class DocumentSearchService (
     private val embeddingService: EmbeddingService,
-    private val qdrantService: QdrantService
+    private val vectorStorage: VectorStorage
 ){
 
     private val logger = LoggerFactory.getLogger(DocumentSearchService::class.java)
@@ -21,6 +21,6 @@ class DocumentSearchService (
     ) : List<VectorSearchMatch> {
         val embedding = embeddingService.embedText(query)
         logger.info("Embedding of $query is $embedding")
-        return qdrantService.searchByVector(embedding, limit, minimumScore)
+        return vectorStorage.searchByVector(embedding, limit, minimumScore)
     }
 }

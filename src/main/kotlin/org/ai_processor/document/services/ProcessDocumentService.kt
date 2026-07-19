@@ -5,7 +5,7 @@ import org.ai_processor.document.persistence.DocumentPersistenceService
 import org.ai_processor.document.persistence.model.DocumentChunkEntity
 import org.ai_processor.processing.embeddings.EmbeddingService
 import org.ai_processor.processing.pdfreader.PDFParser
-import org.ai_processor.vector_storage.QdrantService
+import org.ai_processor.vector_storage.VectorStorage
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
@@ -16,7 +16,7 @@ import java.util.UUID
 class ProcessDocumentService(
     private val documentPersistenceService: DocumentPersistenceService,
     private val embeddingService: EmbeddingService,
-    private val qdrantService: QdrantService,
+    private val vectorStorage: VectorStorage,
     private val pdfParser: PDFParser,
     private val chunker: Chunker
 ) {
@@ -44,7 +44,7 @@ class ProcessDocumentService(
             }
             documentPersistenceService.saveChunks(chunkEntities)
             val embeddedChunks = embeddingService.embedPdfChunks(chunks)
-            qdrantService.saveAll(embeddedChunks)
+            vectorStorage.saveAll(embeddedChunks)
             documentPersistenceService.markReady(documentId)
         } catch (e: Exception) {
             logger.error("Error processing document: $documentId", e)
