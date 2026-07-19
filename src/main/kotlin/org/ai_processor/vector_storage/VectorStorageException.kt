@@ -14,3 +14,8 @@ class VectorStorageSearchException(
     message: String,
     cause: Throwable? = null
 ) : VectorStorageException(message, cause)
+
+class VectorStorageInitializationException(
+    message: String,
+    cause: Throwable? = null
+) : VectorStorageException(message, cause)

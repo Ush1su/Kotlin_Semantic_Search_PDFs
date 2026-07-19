@@ -3,6 +3,7 @@ package org.ai_processor.processing.pdfreader
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDPage
 import org.springframework.stereotype.Service
+import java.io.IOException
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.math.abs
@@ -11,18 +12,25 @@ import kotlin.math.abs
 class PDFParser {
     fun parse(filepath: Path, documentId: UUID): ParsedPDF {
         val pages = mutableListOf<ParsedPage>()
-        Loader.loadPDF(filepath.toFile()).use { document ->
-            for (pageIndex in 0 until document.numberOfPages) {
-                val pageNumber = pageIndex + 1
-                val page: PDPage = document.getPage(pageIndex)
-                val mediaBox = page.mediaBox
-                val width = mediaBox.width
-                val height = mediaBox.height
-                val stripper = PDFStripper(pageNumber)
-                val text = stripper.getText(document)
-                val rawPieces = stripper.textPieces
-                pages.add(buildParsedPage(pageNumber, width, height, rawPieces))
+        try {
+            Loader.loadPDF(filepath.toFile()).use { document ->
+                for (pageIndex in 0 until document.numberOfPages) {
+                    val pageNumber = pageIndex + 1
+                    val page: PDPage = document.getPage(pageIndex)
+                    val mediaBox = page.mediaBox
+                    val width = mediaBox.width
+                    val height = mediaBox.height
+                    val stripper = PDFStripper(pageNumber)
+                    stripper.getText(document)
+                    val rawPieces = stripper.textPieces
+                    pages.add(buildParsedPage(pageNumber, width, height, rawPieces))
+                }
             }
+        } catch (exception: IOException) {
+            throw PdfParsingException(
+                message = "Failed to parse PDF: $filepath",
+                cause = exception
+            )
         }
         return ParsedPDF(
             documentId = documentId,

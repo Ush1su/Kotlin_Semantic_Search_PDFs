@@ -3,6 +3,7 @@ package org.ai_processor.document.api
 import org.ai_processor.document.api.model.DocumentChunkResponse
 import org.ai_processor.document.api.model.DocumentResponse
 import org.ai_processor.document.api.model.DocumentUploadResponse
+import org.ai_processor.document.persistence.DocumentNotFoundException
 import org.ai_processor.document.services.DocumentService
 import org.ai_processor.document.persistence.DocumentPersistenceService
 import org.springframework.http.HttpStatus
@@ -22,14 +23,7 @@ class DocumentController(
     fun uploadDocument(
         @RequestParam("file") file: MultipartFile
     ): DocumentUploadResponse {
-        val documentId = try {
-            documentService.upload(file)
-        } catch (_: Exception) {
-            return DocumentUploadResponse(
-                documentId = null,
-                status = "FAILED"
-            )
-        }
+        val documentId = documentService.upload(file)
 
         return DocumentUploadResponse(
             documentId = documentId,
@@ -42,7 +36,7 @@ class DocumentController(
         @PathVariable documentId: UUID
     ): DocumentResponse {
         val document = documentPersistenceService.getDocumentById(documentId)
-            ?: throw IllegalArgumentException("Document not found: $documentId")
+            ?: throw DocumentNotFoundException(documentId)
 
         return DocumentResponse(
             id = document.id,

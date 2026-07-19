@@ -53,12 +53,12 @@ class QdrantCollectionInitializer(
         } catch (exception: InterruptedException) {
             Thread.currentThread().interrupt()
 
-            throw IllegalStateException(
+            throw VectorStorageInitializationException(
                 "Qdrant collection initialization was interrupted",
                 exception
             )
         } catch (exception: ExecutionException) {
-            throw IllegalStateException(
+            throw VectorStorageInitializationException(
                 "Failed to initialize Qdrant collection",
                 exception.cause ?: exception
             )

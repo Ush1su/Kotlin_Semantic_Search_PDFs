@@ -33,7 +33,7 @@ class DocumentPersistenceService(
 
     @Transactional
     fun markProcessing(documentId: UUID) {
-        val document = getDocumentById(documentId) ?: throw IllegalArgumentException("Document not found")
+        val document = getDocumentById(documentId) ?: throw DocumentNotFoundException(documentId)
         document.status = DocumentStatus.PROCESSING
     }
 
@@ -41,7 +41,7 @@ class DocumentPersistenceService(
     fun markReady(documentId: UUID) {
         val now = Instant.now()
 
-        val document = getDocumentById(documentId) ?: throw IllegalArgumentException("Document not found")
+        val document = getDocumentById(documentId) ?: throw DocumentNotFoundException(documentId)
         document.status = DocumentStatus.READY
         document.processedAt = now
         document.errorMessage = null
@@ -49,7 +49,7 @@ class DocumentPersistenceService(
 
     @Transactional
     fun markFailed(documentId: UUID, errorMessage: String?) {
-        val document = getDocumentById(documentId) ?: throw IllegalArgumentException("Document not found")
+        val document = getDocumentById(documentId) ?: throw DocumentNotFoundException(documentId)
         document.status = DocumentStatus.FAILED
         document.processedAt = Instant.now()
         document.errorMessage = errorMessage

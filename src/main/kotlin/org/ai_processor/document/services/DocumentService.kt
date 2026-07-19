@@ -22,8 +22,12 @@ class DocumentService(
     private val logger = LoggerFactory.getLogger(DocumentService::class.java)
 
     fun upload(file: MultipartFile): UUID {
-        require(!file.isEmpty) { "File is empty" }
-        require(file.contentType == "application/pdf") { "Only PDF files are supported" }
+        if (file.isEmpty) {
+            throw EmptyDocumentUploadException()
+        }
+        if (file.contentType != "application/pdf") {
+            throw UnsupportedDocumentContentTypeException(file.contentType)
+        }
 
         val documentId = UUID.randomUUID()
         val originalFilename = file.originalFilename ?: "document.pdf"
