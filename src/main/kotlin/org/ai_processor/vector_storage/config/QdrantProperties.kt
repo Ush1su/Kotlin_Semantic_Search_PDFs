@@ -15,6 +15,7 @@ data class QdrantProperties(
     val hybridMaxPrefetchLimit: Int = 100,
     val bm25TokenMinLength: Int = 2,
     val batchSize: Int = 128,
+    val maxConcurrentUpsertBatches: Int = 2,
     val timeoutSeconds: Long = 30
 ) {
     init {
@@ -35,6 +36,15 @@ data class QdrantProperties(
         }
         require(bm25TokenMinLength > 0) {
             "Qdrant BM25 token min length must be greater than zero"
+        }
+        require(batchSize > 0) {
+            "Qdrant batch size must be greater than zero"
+        }
+        require(maxConcurrentUpsertBatches > 0) {
+            "Qdrant max concurrent upsert batches must be greater than zero"
+        }
+        require(timeoutSeconds > 0) {
+            "Qdrant timeout seconds must be greater than zero"
         }
     }
 }

@@ -30,11 +30,13 @@ app:
     hybrid-prefetch-multiplier: ${QDRANT_HYBRID_PREFETCH_MULTIPLIER:4}
     hybrid-max-prefetch-limit: ${QDRANT_HYBRID_MAX_PREFETCH_LIMIT:100}
     bm25-token-min-length: ${QDRANT_BM25_TOKEN_MIN_LENGTH:2}
+    max-concurrent-upsert-batches: ${QDRANT_MAX_CONCURRENT_UPSERT_BATCHES:2}
 
   embedding:
     base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
     model: ${EMBEDDING_MODEL:qwen3-embedding:0.6b}
     dimensions: ${EMBEDDING_DIMENSIONS:512}
+    max-concurrent-batches: ${EMBEDDING_MAX_CONCURRENT_BATCHES:2}
 
 server:
   port: 8080

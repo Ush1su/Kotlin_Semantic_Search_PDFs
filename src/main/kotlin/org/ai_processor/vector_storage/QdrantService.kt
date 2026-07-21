@@ -38,14 +38,20 @@ class QdrantService(
 
         chunks
             .chunked(properties.batchSize)
-            .forEach { batch ->
-                executeQdrantOperation<UpdateResult>(
-                    operationName = "save ${batch.size} chunks"
-                ) {
-                    qdrantClient.upsertAsync(
+            .chunked(properties.maxConcurrentUpsertBatches)
+            .forEach { batchGroup ->
+                val upserts = batchGroup.map { batch ->
+                    batch to qdrantClient.upsertAsync(
                         properties.collectionName,
                         batch.map(::toPoint)
                     )
+                }
+                upserts.forEach { (batch, future) ->
+                    executeQdrantOperation<UpdateResult>(
+                        operationName = "save ${batch.size} chunks"
+                    ) {
+                        future
+                    }
                 }
             }
     }
