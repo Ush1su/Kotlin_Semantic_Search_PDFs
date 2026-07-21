@@ -3,18 +3,24 @@ package org.ai_processor.vector_storage
 import com.google.common.util.concurrent.ListenableFuture
 import io.qdrant.client.ConditionFactory.matchKeyword
 import io.qdrant.client.QdrantClient
+import io.qdrant.client.QueryFactory.fusion
+import io.qdrant.client.QueryFactory.nearest
 import org.ai_processor.processing.embeddings.EmbeddedChunk
 import io.qdrant.client.ValueFactory.value
-import io.qdrant.client.VectorsFactory.vectors
+import io.qdrant.client.VectorFactory.vector
+import io.qdrant.client.VectorsFactory.namedVectors
 import org.springframework.stereotype.Service
 import io.qdrant.client.PointIdFactory.id
 import io.qdrant.client.grpc.Common.Filter
+import io.qdrant.client.grpc.Points.Fusion
 import io.qdrant.client.grpc.Points.PointStruct
+import io.qdrant.client.grpc.Points.PrefetchQuery
+import io.qdrant.client.grpc.Points.Query
+import io.qdrant.client.grpc.Points.QueryPoints
 import io.qdrant.client.grpc.Points.UpdateResult
 import org.ai_processor.vector_storage.config.QdrantProperties
 import org.ai_processor.vector_storage.model.VectorSearchMatch
 import io.qdrant.client.grpc.Points.ScoredPoint
-import io.qdrant.client.grpc.Points.SearchPoints
 import io.qdrant.client.grpc.Points.WithPayloadSelector
 import java.util.UUID
 import java.util.concurrent.CancellationException
@@ -24,6 +30,7 @@ import java.util.concurrent.ExecutionException
 class QdrantService(
     private val qdrantClient: QdrantClient,
     private val properties: QdrantProperties,
+    private val bm25DocumentFactory: QdrantBm25DocumentFactory
 ) : VectorStorage {
     override fun saveAll(chunks: List<EmbeddedChunk>) {
         if (chunks.isEmpty()) return
@@ -63,29 +70,40 @@ class QdrantService(
         }
     }
 
-    override fun searchByVector(
+    override fun search(
+        query: String,
         vector: List<Float>,
         limit: Int,
         minimumScore: Float?
     ): List<VectorSearchMatch> {
         validateSearchArguments(vector, limit, minimumScore)
-        val request = SearchPoints.newBuilder()
+
+        val densePrefetch = prefetch(
+            query = nearest(vector),
+            using = properties.denseVectorName,
+            limit = hybridPrefetchLimit(limit),
+            minimumScore = minimumScore
+        )
+        val lexicalPrefetch = prefetch(
+            query = nearest(bm25DocumentFactory.document(query)),
+            using = properties.bm25VectorName,
+            limit = hybridPrefetchLimit(limit),
+            minimumScore = null
+        )
+
+        val request = QueryPoints.newBuilder()
             .setCollectionName(properties.collectionName)
-            .addAllVector(vector)
+            .addPrefetch(densePrefetch)
+            .addPrefetch(lexicalPrefetch)
+            .setQuery(fusion(Fusion.RRF))
             .setLimit(limit.toLong())
-            .setWithPayload(
-                WithPayloadSelector.newBuilder()
-                    .setEnable(true)
-                    .build()
-            )
-            .apply {
-                minimumScore?.let(::setScoreThreshold)
-            }
+            .setWithPayload(enabledPayloadSelector())
             .build()
+
         return executeQdrantOperation(
-            operationName = "search for $limit nearest chunks"
+            operationName = "hybrid search for $limit nearest chunks"
         ) {
-            qdrantClient.searchAsync(request)
+            qdrantClient.queryAsync(request)
         }.map(::toVectorSearchMatch)
     }
 
@@ -132,12 +150,12 @@ class QdrantService(
             )
         }
 
-        require(limit > 0) {
-            "Search limit must be greater than zero"
+        if (limit <= 0) {
+            throw VectorStorageSearchException("Search limit must be greater than zero")
         }
 
-        require(minimumScore == null || minimumScore.isFinite()) {
-            "Minimum score must be a finite number"
+        if (minimumScore != null && !minimumScore.isFinite()) {
+            throw VectorStorageSearchException("Minimum score must be a finite number")
         }
     }
 
@@ -176,9 +194,16 @@ class QdrantService(
     }
 
     private fun toPoint(chunk: EmbeddedChunk): PointStruct {
+        val pointVectors = mutableMapOf(
+            properties.denseVectorName to vector(chunk.vector)
+        )
+        pointVectors[properties.bm25VectorName] = vector(
+            bm25DocumentFactory.document(chunk.text)
+        )
+
         return PointStruct.newBuilder()
             .setId(id(chunk.chunkId))
-            .setVectors(vectors(chunk.vector))
+            .setVectors(namedVectors(pointVectors))
             .putAllPayload(
                 mapOf(
                     DOCUMENT_ID_PAYLOAD to value(chunk.documentId.toString()),
@@ -187,6 +212,34 @@ class QdrantService(
             )
             .build()
     }
+
+    private fun enabledPayloadSelector(): WithPayloadSelector {
+        return WithPayloadSelector.newBuilder()
+            .setEnable(true)
+            .build()
+    }
+
+    private fun prefetch(
+        query: Query,
+        using: String,
+        limit: Int,
+        minimumScore: Float?
+    ): PrefetchQuery {
+        return PrefetchQuery.newBuilder()
+            .setQuery(query)
+            .setUsing(using)
+            .setLimit(limit.toLong())
+            .apply {
+                minimumScore?.let(::setScoreThreshold)
+            }
+            .build()
+    }
+
+    private fun hybridPrefetchLimit(limit: Int): Int {
+        val multipliedLimit = limit * properties.hybridPrefetchMultiplier
+        return maxOf(limit, minOf(multipliedLimit, properties.hybridMaxPrefetchLimit))
+    }
+
     private companion object {
         const val DOCUMENT_ID_PAYLOAD = "document_id"
         const val TEXT_PAYLOAD = "text"

@@ -58,7 +58,7 @@ class Chunker(
     }
 
     private companion object {
-        const val DEFAULT_MAX_CHUNK_SIZE = 1000
-        const val DEFAULT_MAX_CHUNK_OVERLAP = 200
+        const val DEFAULT_MAX_CHUNK_SIZE = 300
+        const val DEFAULT_MAX_CHUNK_OVERLAP = 50
     }
 }
