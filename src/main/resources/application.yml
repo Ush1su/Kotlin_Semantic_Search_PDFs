@@ -25,6 +25,11 @@ app:
     use-tls: ${QDRANT_USE_TLS:false}
     collection-name: ${QDRANT_COLLECTION_NAME:chunks}
     vector-size: ${EMBEDDING_DIMENSIONS:512}
+    dense-vector-name: ${QDRANT_DENSE_VECTOR_NAME:dense}
+    bm25-vector-name: ${QDRANT_BM25_VECTOR_NAME:bm25}
+    hybrid-prefetch-multiplier: ${QDRANT_HYBRID_PREFETCH_MULTIPLIER:4}
+    hybrid-max-prefetch-limit: ${QDRANT_HYBRID_MAX_PREFETCH_LIMIT:100}
+    bm25-token-min-length: ${QDRANT_BM25_TOKEN_MIN_LENGTH:2}
 
   embedding:
     base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}

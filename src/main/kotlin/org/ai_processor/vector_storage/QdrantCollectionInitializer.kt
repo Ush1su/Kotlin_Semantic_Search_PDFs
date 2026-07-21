@@ -1,8 +1,14 @@
 package org.ai_processor.vector_storage
 
 import io.qdrant.client.QdrantClient
+import io.qdrant.client.grpc.Collections.CreateCollection
 import io.qdrant.client.grpc.Collections.Distance
+import io.qdrant.client.grpc.Collections.Modifier
+import io.qdrant.client.grpc.Collections.SparseVectorConfig
+import io.qdrant.client.grpc.Collections.SparseVectorParams
 import io.qdrant.client.grpc.Collections.VectorParams
+import io.qdrant.client.grpc.Collections.VectorParamsMap
+import io.qdrant.client.grpc.Collections.VectorsConfig
 import org.ai_processor.vector_storage.config.QdrantProperties
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
@@ -26,10 +32,6 @@ class QdrantCollectionInitializer(
                 .get()
 
             if (collectionExists) {
-                logger.info(
-                    "Qdrant collection '{}' already exists",
-                    properties.collectionName
-                )
                 return
             }
 
@@ -40,13 +42,22 @@ class QdrantCollectionInitializer(
 
             qdrantClient
                 .createCollectionAsync(
-                    properties.collectionName,
-                    vectorParams
+                    CreateCollection.newBuilder()
+                        .setCollectionName(properties.collectionName)
+                        .setVectorsConfig(
+                            VectorsConfig.newBuilder()
+                                .setParamsMap(
+                                    VectorParamsMap.newBuilder()
+                                        .putMap(properties.denseVectorName, vectorParams)
+                                )
+                        )
+                        .setSparseVectorsConfig(sparseVectorConfig())
+                        .build()
                 )
                 .get()
 
             logger.info(
-                "Created Qdrant collection '{}' with vector size {}",
+                "Created Qdrant collection '{}' with dense vector size {} and BM25 sparse vector",
                 properties.collectionName,
                 properties.vectorSize
             )
@@ -63,5 +74,16 @@ class QdrantCollectionInitializer(
                 exception.cause ?: exception
             )
         }
+    }
+
+    private fun sparseVectorConfig(): SparseVectorConfig {
+        return SparseVectorConfig.newBuilder()
+            .putMap(
+                properties.bm25VectorName,
+                SparseVectorParams.newBuilder()
+                    .setModifier(Modifier.Idf)
+                    .build()
+            )
+            .build()
     }
 }

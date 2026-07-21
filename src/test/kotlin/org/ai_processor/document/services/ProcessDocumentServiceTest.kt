@@ -329,7 +329,8 @@ class ProcessDocumentServiceTest {
 
         override fun deleteAllByDocumentId(documentId: UUID) = Unit
 
-        override fun searchByVector(
+        override fun search(
+            query: String,
             vector: List<Float>,
             limit: Int,
             minimumScore: Float?

@@ -21,6 +21,6 @@ class DocumentSearchService (
     ) : List<VectorSearchMatch> {
         val embedding = embeddingService.embedText(query)
         logger.info("Embedding of $query is $embedding")
-        return vectorStorage.searchByVector(embedding, limit, minimumScore)
+        return vectorStorage.search(query, embedding, limit, minimumScore)
     }
 }

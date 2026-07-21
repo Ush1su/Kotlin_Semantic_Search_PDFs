@@ -19,18 +19,20 @@ internal class RecordingVectorStorage : VectorStorage {
         deletedDocumentIds += documentId
     }
 
-    override fun searchByVector(
+    override fun search(
+        query: String,
         vector: List<Float>,
         limit: Int,
         minimumScore: Float?
     ): List<VectorSearchMatch> {
-        searches += Search(vector, limit, minimumScore)
+        searches += Search(vector, limit, minimumScore, query)
         return searchResults
     }
 
     data class Search(
         val vector: List<Float>,
         val limit: Int,
-        val minimumScore: Float?
+        val minimumScore: Float?,
+        val query: String
     )
 }

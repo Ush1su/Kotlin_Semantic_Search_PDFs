@@ -39,7 +39,7 @@ class DocumentSearchServiceTest {
 
         assertEquals(listOf(expectedMatch), results)
         assertEquals(
-            listOf(RecordingVectorStorage.Search(embedding, 3, 0.7f)),
+            listOf(RecordingVectorStorage.Search(embedding, 3, 0.7f, query)),
             vectorStorage.searches
         )
     }
