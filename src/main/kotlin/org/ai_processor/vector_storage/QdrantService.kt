@@ -21,6 +21,7 @@ import io.qdrant.client.grpc.Points.UpdateResult
 import org.ai_processor.vector_storage.config.QdrantProperties
 import org.ai_processor.vector_storage.model.VectorSearchMatch
 import io.qdrant.client.grpc.Points.ScoredPoint
+import io.qdrant.client.grpc.Points.SearchPoints
 import io.qdrant.client.grpc.Points.WithPayloadSelector
 import java.util.UUID
 import java.util.concurrent.CancellationException
