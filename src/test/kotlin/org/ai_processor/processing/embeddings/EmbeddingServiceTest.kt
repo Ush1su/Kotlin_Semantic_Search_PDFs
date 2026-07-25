@@ -14,7 +14,7 @@ class EmbeddingServiceTest {
         val client = RecordingEmbeddingClient(emptyMap())
         val service = embeddingService(client)
 
-        val embeddedChunks = service.embedPdfChunks(emptyList())
+        val embeddedChunks = service.embedPdfChunks(UUID.randomUUID(), emptyList())
 
         assertTrue(embeddedChunks.isEmpty())
         assertTrue(client.calls.isEmpty())
@@ -23,6 +23,7 @@ class EmbeddingServiceTest {
     @Test
     fun `embedPdfChunks batches texts and preserves chunk metadata`() {
         val documentId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
         val chunks = listOf(
             pdfChunk(documentId = documentId, text = "alpha", chunkIndex = 1),
             pdfChunk(documentId = documentId, text = "beta", chunkIndex = 2),
@@ -37,12 +38,13 @@ class EmbeddingServiceTest {
         )
         val service = embeddingService(client, batchSize = 2)
 
-        val embeddedChunks = service.embedPdfChunks(chunks)
+        val embeddedChunks = service.embedPdfChunks(userId, chunks)
 
         assertEquals(listOf(listOf("alpha", "beta"), listOf("gamma")), client.calls)
         assertEquals(chunks.map { it.id }, embeddedChunks.map { it.chunkId })
         assertEquals(chunks.map { it.documentId }, embeddedChunks.map { it.documentId })
         assertEquals(chunks.map { it.text }, embeddedChunks.map { it.text })
+        assertEquals(List(chunks.size) { userId }, embeddedChunks.map { it.userId })
         assertEquals(
             listOf(listOf(1f, 0f), listOf(0f, 1f), listOf(0.5f, 0.5f)),
             embeddedChunks.map { it.vector }
@@ -56,7 +58,7 @@ class EmbeddingServiceTest {
         val chunks = listOf(pdfChunk(text = "   "))
 
         assertFailsWith<IllegalArgumentException> {
-            service.embedPdfChunks(chunks)
+            service.embedPdfChunks(UUID.randomUUID(), chunks)
         }
 
         assertTrue(client.calls.isEmpty())

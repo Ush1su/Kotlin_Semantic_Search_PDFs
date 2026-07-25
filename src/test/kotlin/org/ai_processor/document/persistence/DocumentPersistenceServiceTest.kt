@@ -120,22 +120,36 @@ class DocumentPersistenceServiceTest {
 
     @Test
     fun `deleteDocumentData deletes chunks before document row`() {
-        val documentId = UUID.randomUUID()
+        val document = documentEntity()
+        `when`(documentRepository.findByIdAndUserId(document.id, document.userId))
+            .thenReturn(document)
 
-        persistenceService.deleteDocumentData(documentId)
+        persistenceService.deleteDocumentData(document.id, document.userId)
 
         val order = inOrder(chunkRepository, documentRepository)
-        order.verify(chunkRepository).deleteByDocumentId(documentId)
-        order.verify(documentRepository).deleteById(documentId)
+        order.verify(chunkRepository).deleteByDocumentId(document.id)
+        order.verify(documentRepository).deleteById(document.id)
+    }
+
+    @Test
+    fun `deleteDocumentData throws DocumentNotFoundException when document is missing`() {
+        val documentId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        `when`(documentRepository.findByIdAndUserId(documentId, userId))
+            .thenReturn(null)
+
+        assertFailsWith<DocumentNotFoundException> {
+            persistenceService.deleteDocumentData(documentId, userId)
+        }
     }
 
     @Test
     fun `getStoragePath returns path for existing document`() {
         val document = documentEntity(storagePath = "/documents/file.pdf")
-        `when`(documentRepository.findById(document.id))
-            .thenReturn(Optional.of(document))
+        `when`(documentRepository.findByIdAndUserId(document.id, document.userId))
+            .thenReturn(document)
 
-        val storagePath = persistenceService.getStoragePath(document.id)
+        val storagePath = persistenceService.getStoragePath(document.id, document.userId)
 
         assertEquals("/documents/file.pdf", storagePath)
     }
@@ -143,37 +157,54 @@ class DocumentPersistenceServiceTest {
     @Test
     fun `getStoragePath throws DocumentNotFoundException when document is missing`() {
         val documentId = UUID.randomUUID()
-        `when`(documentRepository.findById(documentId))
-            .thenReturn(Optional.empty())
+        val userId = UUID.randomUUID()
+        `when`(documentRepository.findByIdAndUserId(documentId, userId))
+            .thenReturn(null)
 
         assertFailsWith<DocumentNotFoundException> {
-            persistenceService.getStoragePath(documentId)
+            persistenceService.getStoragePath(documentId, userId)
         }
     }
 
     @Test
-    fun `getChunksByDocumentId returns chunks ordered by repository query`() {
-        val documentId = UUID.randomUUID()
+    fun `getChunksByDocumentIdAndUserId returns chunks ordered by repository query`() {
+        val document = documentEntity()
         val chunks = listOf(
-            documentChunkEntity(documentId = documentId, chunkIndex = 1),
-            documentChunkEntity(documentId = documentId, chunkIndex = 2)
+            documentChunkEntity(documentId = document.id, chunkIndex = 1),
+            documentChunkEntity(documentId = document.id, chunkIndex = 2)
         )
-        `when`(chunkRepository.findByDocumentIdOrderByChunkIndex(documentId))
+        `when`(documentRepository.findByIdAndUserId(document.id, document.userId))
+            .thenReturn(document)
+        `when`(chunkRepository.findByDocumentIdOrderByChunkIndex(document.id))
             .thenReturn(chunks)
 
-        val found = persistenceService.getChunksByDocumentId(documentId)
+        val found = persistenceService.getChunksByDocumentIdAndUserId(document.id, document.userId)
 
         assertEquals(chunks, found)
     }
 
+    @Test
+    fun `getChunksByDocumentIdAndUserId throws DocumentNotFoundException when document is missing`() {
+        val documentId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        `when`(documentRepository.findByIdAndUserId(documentId, userId))
+            .thenReturn(null)
+
+        assertFailsWith<DocumentNotFoundException> {
+            persistenceService.getChunksByDocumentIdAndUserId(documentId, userId)
+        }
+    }
+
     private fun documentEntity(
         id: UUID = UUID.randomUUID(),
+        userId: UUID = UUID.randomUUID(),
         status: DocumentStatus = DocumentStatus.UPLOADED,
         storagePath: String = "/documents/$id/original.pdf",
         errorMessage: String? = null
     ): DocumentEntity {
         return DocumentEntity(
             id = id,
+            userId = userId,
             originalFilename = "original.pdf",
             contentType = "application/pdf",
             fileSizeBytes = 100,

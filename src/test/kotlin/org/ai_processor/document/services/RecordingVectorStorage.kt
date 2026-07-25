@@ -15,21 +15,25 @@ internal class RecordingVectorStorage : VectorStorage {
         savedBatches += chunks
     }
 
-    override fun deleteAllByDocumentId(documentId: UUID) {
+    override fun deleteAllByDocumentIdAndUserId(userId: UUID, documentId: UUID) {
         deletedDocumentIds += documentId
     }
 
     override fun search(
+        userId: UUID,
+        documentId: UUID?,
         query: String,
         vector: List<Float>,
         limit: Int,
         minimumScore: Float?
     ): List<VectorSearchMatch> {
-        searches += Search(vector, limit, minimumScore, query)
+        searches += Search(userId, documentId, vector, limit, minimumScore, query)
         return searchResults
     }
 
     data class Search(
+        val userId: UUID,
+        val documentId: UUID?,
         val vector: List<Float>,
         val limit: Int,
         val minimumScore: Float?,

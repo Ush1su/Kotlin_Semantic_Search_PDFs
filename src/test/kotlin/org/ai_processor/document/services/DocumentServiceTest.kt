@@ -9,6 +9,8 @@ import org.ai_processor.storage.FileStorage
 import org.ai_processor.vector_storage.VectorStorage
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.mockito.Mockito.mock
+import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.Resource
 import org.springframework.mock.web.MockMultipartFile
 import java.util.UUID
 import kotlin.test.Test
@@ -16,6 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class DocumentServiceTest {
+    private val userId = UUID.randomUUID()
     private val fileStorage = RecordingFileStorage()
     private val documentPersistenceService = RecordingDocumentPersistenceService()
     private val vectorStorage = RecordingVectorStorage()
@@ -37,7 +40,7 @@ class DocumentServiceTest {
         )
 
         assertFailsWith<EmptyDocumentUploadException> {
-            documentService.upload(file)
+            documentService.upload(file, userId)
         }
 
         assertEquals(0, fileStorage.savedFiles.size)
@@ -55,7 +58,7 @@ class DocumentServiceTest {
         )
 
         assertFailsWith<UnsupportedDocumentContentTypeException> {
-            documentService.upload(file)
+            documentService.upload(file, userId)
         }
 
         assertEquals(0, fileStorage.savedFiles.size)
@@ -73,7 +76,7 @@ class DocumentServiceTest {
             bytes
         )
 
-        val documentId = documentService.upload(file)
+        val documentId = documentService.upload(file, userId)
 
         assertEquals(1, fileStorage.savedFiles.size)
         val savedFile = fileStorage.savedFiles.single()
@@ -90,7 +93,7 @@ class DocumentServiceTest {
         assertEquals(DocumentStatus.UPLOADED, savedDocument.status)
 
         assertEquals(
-            listOf(RecordingProcessDocumentService.ProcessCall(documentId, savedFile.storagePath)),
+            listOf(RecordingProcessDocumentService.ProcessCall(documentId, savedFile.storagePath, userId)),
             processDocumentService.processCalls
         )
     }
@@ -104,7 +107,7 @@ class DocumentServiceTest {
             "%PDF-1.7".toByteArray()
         )
 
-        val documentId = documentService.upload(file)
+        val documentId = documentService.upload(file, userId)
 
         assertEquals(documentId, fileStorage.savedFiles.single().documentId)
         assertEquals("document.pdf", fileStorage.savedFiles.single().originalFilename)
@@ -116,7 +119,7 @@ class DocumentServiceTest {
         val storagePath = "/tmp/document.pdf"
         documentPersistenceService.storagePaths[documentId] = storagePath
 
-        documentService.delete(documentId)
+        documentService.delete(documentId, userId)
 
         assertEquals(listOf(storagePath), fileStorage.deletedPaths)
         assertEquals(listOf(documentId), documentPersistenceService.deletedDocumentIds)
@@ -149,8 +152,8 @@ class DocumentServiceTest {
             return storagePath
         }
 
-        override fun load(storagePath: String): ByteArray {
-            return savedFiles.single { it.storagePath == storagePath }.bytes
+        override fun loadAsResource(storagePath: String): Resource {
+            return ByteArrayResource(savedFiles.single { it.storagePath == storagePath }.bytes)
         }
 
         override fun delete(storagePath: String) {
@@ -172,11 +175,11 @@ class DocumentServiceTest {
             return documentEntity
         }
 
-        override fun getStoragePath(documentId: UUID): String {
+        override fun getStoragePath(documentId: UUID, userId: UUID): String {
             return storagePaths.getValue(documentId)
         }
 
-        override fun deleteDocumentData(documentId: UUID) {
+        override fun deleteDocumentData(documentId: UUID, userId: UUID) {
             deletedDocumentIds += documentId
         }
     }
@@ -190,13 +193,14 @@ class DocumentServiceTest {
     ) {
         val processCalls = mutableListOf<ProcessCall>()
 
-        override fun process(documentId: UUID, storagePathString: String) {
-            processCalls += ProcessCall(documentId, storagePathString)
+        override fun process(documentId: UUID, storagePathString: String, userId: UUID) {
+            processCalls += ProcessCall(documentId, storagePathString, userId)
         }
 
         data class ProcessCall(
             val documentId: UUID,
-            val storagePath: String
+            val storagePath: String,
+            val userId: UUID
         )
     }
 }

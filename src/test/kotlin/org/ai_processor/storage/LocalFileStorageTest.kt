@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class LocalFileStorageTest {
     @Test
-    fun `save writes file under document directory and load reads the same bytes`(
+    fun `save writes file under document directory and loadAsResource reads the same bytes`(
         @TempDir tempDir: Path
     ) {
         val storage = LocalFileStorage(tempDir.toString())
@@ -31,7 +31,7 @@ class LocalFileStorageTest {
             .resolve("document.pdf")
         assertEquals(expectedPath.toString(), storagePath)
         assertTrue(Files.exists(expectedPath))
-        assertContentEquals(bytes, storage.load(storagePath))
+        assertContentEquals(bytes, storage.loadAsResource(storagePath).inputStream.readBytes())
     }
 
     @Test
@@ -51,13 +51,13 @@ class LocalFileStorageTest {
     }
 
     @Test
-    fun `load missing file throws FileStorageException`(
+    fun `loadAsResource missing file throws FileStorageException`(
         @TempDir tempDir: Path
     ) {
         val storage = LocalFileStorage(tempDir.toString())
 
         assertFailsWith<FileStorageException> {
-            storage.load(tempDir.resolve("missing.pdf").toString())
+            storage.loadAsResource(tempDir.resolve("missing.pdf").toString())
         }
     }
 

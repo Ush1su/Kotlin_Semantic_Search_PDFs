@@ -20,6 +20,7 @@ class DocumentSearchServiceTest {
 
     @Test
     fun `search embeds query and delegates vector search`() {
+        val userId = UUID.randomUUID()
         val query = "linear algebra eigenvectors"
         val embedding = listOf(0.1f, 0.2f, 0.3f)
         val expectedMatch = VectorSearchMatch(
@@ -32,6 +33,7 @@ class DocumentSearchServiceTest {
         `when`(embeddingService.embedText(query)).thenReturn(embedding)
 
         val results = searchService.search(
+            userId = userId,
             query = query,
             limit = 3,
             minimumScore = 0.7f
@@ -39,7 +41,7 @@ class DocumentSearchServiceTest {
 
         assertEquals(listOf(expectedMatch), results)
         assertEquals(
-            listOf(RecordingVectorStorage.Search(embedding, 3, 0.7f, query)),
+            listOf(RecordingVectorStorage.Search(userId, null, embedding, 3, 0.7f, query)),
             vectorStorage.searches
         )
     }

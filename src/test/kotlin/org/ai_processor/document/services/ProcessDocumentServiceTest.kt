@@ -30,6 +30,7 @@ class ProcessDocumentServiceTest {
     fun `process runs parsing chunking embedding vector save and marks document ready`() {
         val events = mutableListOf<String>()
         val documentId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
         val storagePath = "/tmp/document.pdf"
         val parsedPDF = ParsedPDF(
             documentId = documentId,
@@ -38,6 +39,7 @@ class ProcessDocumentServiceTest {
         val chunks = listOf(pdfChunk(documentId, chunkIndex = 1))
         val embeddedChunks = listOf(
             EmbeddedChunk(
+                userId = userId,
                 chunkId = chunks.single().id,
                 documentId = documentId,
                 text = chunks.single().text,
@@ -55,7 +57,7 @@ class ProcessDocumentServiceTest {
             chunker = RecordingChunker(events, chunks)
         )
 
-        service.process(documentId, storagePath)
+        service.process(documentId, storagePath, userId)
 
         assertEquals(
             listOf(
@@ -89,6 +91,7 @@ class ProcessDocumentServiceTest {
     fun `process marks document failed when PDF parsing fails`() {
         val events = mutableListOf<String>()
         val documentId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
         val storagePath = "/tmp/broken.pdf"
         val failure = RuntimeException("cannot parse")
         val persistence = RecordingDocumentPersistenceService(events)
@@ -102,7 +105,7 @@ class ProcessDocumentServiceTest {
         )
 
         val thrown = assertFailsWith<RuntimeException> {
-            service.process(documentId, storagePath)
+            service.process(documentId, storagePath, userId)
         }
 
         assertSame(failure, thrown)
@@ -120,6 +123,7 @@ class ProcessDocumentServiceTest {
     fun `process marks document failed when embedding fails`() {
         val events = mutableListOf<String>()
         val documentId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
         val parsedPDF = ParsedPDF(documentId, emptyList())
         val chunks = listOf(pdfChunk(documentId, chunkIndex = 1))
         val failure = RuntimeException("embedding unavailable")
@@ -134,7 +138,7 @@ class ProcessDocumentServiceTest {
         )
 
         val thrown = assertFailsWith<RuntimeException> {
-            service.process(documentId, "/tmp/document.pdf")
+            service.process(documentId, "/tmp/document.pdf", userId)
         }
 
         assertSame(failure, thrown)
@@ -153,10 +157,12 @@ class ProcessDocumentServiceTest {
     fun `process marks document failed when vector storage save fails`() {
         val events = mutableListOf<String>()
         val documentId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
         val parsedPDF = ParsedPDF(documentId, emptyList())
         val chunks = listOf(pdfChunk(documentId, chunkIndex = 1))
         val embeddedChunks = listOf(
             EmbeddedChunk(
+                userId = userId,
                 chunkId = chunks.single().id,
                 documentId = documentId,
                 text = chunks.single().text,
@@ -174,7 +180,7 @@ class ProcessDocumentServiceTest {
         )
 
         val thrown = assertFailsWith<RuntimeException> {
-            service.process(documentId, "/tmp/document.pdf")
+            service.process(documentId, "/tmp/document.pdf", userId)
         }
 
         assertSame(failure, thrown)
@@ -308,7 +314,7 @@ class ProcessDocumentServiceTest {
             model = "test-embedding"
         )
     ) {
-        override fun embedPdfChunks(chunks: List<PdfChunk>): List<EmbeddedChunk> {
+        override fun embedPdfChunks(userId: UUID, chunks: List<PdfChunk>): List<EmbeddedChunk> {
             events += "embed"
             failure?.let { throw it }
             return embeddedChunks
@@ -327,9 +333,11 @@ class ProcessDocumentServiceTest {
             savedBatches += chunks
         }
 
-        override fun deleteAllByDocumentId(documentId: UUID) = Unit
+        override fun deleteAllByDocumentIdAndUserId(userId: UUID, documentId: UUID) = Unit
 
         override fun search(
+            userId: UUID,
+            documentId: UUID?,
             query: String,
             vector: List<Float>,
             limit: Int,
