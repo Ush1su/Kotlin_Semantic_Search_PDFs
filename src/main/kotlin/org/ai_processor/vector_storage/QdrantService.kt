@@ -21,7 +21,6 @@ import io.qdrant.client.grpc.Points.UpdateResult
 import org.ai_processor.vector_storage.config.QdrantProperties
 import org.ai_processor.vector_storage.model.VectorSearchMatch
 import io.qdrant.client.grpc.Points.ScoredPoint
-import io.qdrant.client.grpc.Points.SearchPoints
 import io.qdrant.client.grpc.Points.WithPayloadSelector
 import java.util.UUID
 import java.util.concurrent.CancellationException
@@ -57,8 +56,14 @@ class QdrantService(
             }
     }
 
-    override fun deleteAllByDocumentId(documentId: UUID) {
+    override fun deleteAllByDocumentIdAndUserId(userId: UUID, documentId: UUID) {
         val filter = Filter.newBuilder()
+            .addMust(
+                matchKeyword(
+                    USER_ID_PAYLOAD,
+                    userId.toString()
+                )
+            )
             .addMust(
                 matchKeyword(
                     DOCUMENT_ID_PAYLOAD,
@@ -78,6 +83,7 @@ class QdrantService(
     }
 
     override fun search(
+        userId: UUID,
         query: String,
         vector: List<Float>,
         limit: Int,
@@ -85,17 +91,23 @@ class QdrantService(
     ): List<VectorSearchMatch> {
         validateSearchArguments(vector, limit, minimumScore)
 
+        val userFilter = Filter.newBuilder()
+            .addMust(matchKeyword(USER_ID_PAYLOAD, userId.toString()))
+            .build()
+
         val densePrefetch = prefetch(
             query = nearest(vector),
             using = properties.denseVectorName,
             limit = hybridPrefetchLimit(limit),
-            minimumScore = minimumScore
+            minimumScore = minimumScore,
+            filter = userFilter
         )
         val lexicalPrefetch = prefetch(
             query = nearest(bm25DocumentFactory.document(query)),
             using = properties.bm25VectorName,
             limit = hybridPrefetchLimit(limit),
-            minimumScore = null
+            minimumScore = null,
+            filter = userFilter
         )
 
         val request = QueryPoints.newBuilder()
@@ -213,6 +225,7 @@ class QdrantService(
             .setVectors(namedVectors(pointVectors))
             .putAllPayload(
                 mapOf(
+                    USER_ID_PAYLOAD to value(chunk.userId.toString()),
                     DOCUMENT_ID_PAYLOAD to value(chunk.documentId.toString()),
                     TEXT_PAYLOAD to value(chunk.text)
                 )
@@ -230,7 +243,8 @@ class QdrantService(
         query: Query,
         using: String,
         limit: Int,
-        minimumScore: Float?
+        minimumScore: Float?,
+        filter: Filter? = null
     ): PrefetchQuery {
         return PrefetchQuery.newBuilder()
             .setQuery(query)
@@ -238,6 +252,7 @@ class QdrantService(
             .setLimit(limit.toLong())
             .apply {
                 minimumScore?.let(::setScoreThreshold)
+                filter?.let(::setFilter)
             }
             .build()
     }
@@ -249,6 +264,7 @@ class QdrantService(
 
     private companion object {
         const val DOCUMENT_ID_PAYLOAD = "document_id"
+        const val USER_ID_PAYLOAD = "user_id"
         const val TEXT_PAYLOAD = "text"
     }
 }

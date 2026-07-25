@@ -24,7 +24,7 @@ class ProcessDocumentService(
     private val logger = LoggerFactory.getLogger(ProcessDocumentService::class.java)
 
     @Async("documentProcessingExecutor")
-    fun process(documentId: UUID, storagePathString: String) {
+    fun process(documentId: UUID, storagePathString: String, userId: UUID) {
         try {
             documentPersistenceService.markProcessing(documentId)
             val storagePath = Path.of(storagePathString)
@@ -43,7 +43,7 @@ class ProcessDocumentService(
                 )
             }
             documentPersistenceService.saveChunks(chunkEntities)
-            val embeddedChunks = embeddingService.embedPdfChunks(chunks)
+            val embeddedChunks = embeddingService.embedPdfChunks(userId, chunks)
             vectorStorage.saveAll(embeddedChunks)
             documentPersistenceService.markReady(documentId)
         } catch (e: Exception) {

@@ -1,5 +1,6 @@
 package org.ai_processor.document.api
 
+import org.ai_processor.auth.CurrentUserProvider
 import org.ai_processor.document.api.model.DocumentSearchResponse
 import org.ai_processor.document.api.model.DocumentSearchResultResponse
 import org.ai_processor.document.api.model.SearchChunkResponse
@@ -12,7 +13,8 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/search")
 class DocumentSearchController(
-    private val documentSearchService: DocumentSearchService
+    private val documentSearchService: DocumentSearchService,
+    private val currentUserProvider: CurrentUserProvider,
 ) {
 
     @GetMapping
@@ -21,8 +23,10 @@ class DocumentSearchController(
         @RequestParam(defaultValue = "10") limit: Int,
         @RequestParam(required = false) minimumScore: Float?
     ): DocumentSearchResponse {
+        val userId = currentUserProvider.currentUserId()
 
         val vectorSearchOutput = documentSearchService.search(
+            userId = userId,
             query = query,
             limit = limit,
             minimumScore = minimumScore

@@ -6,6 +6,7 @@ import org.ai_processor.vector_storage.model.VectorSearchMatch
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
@@ -21,6 +22,7 @@ class DocumentSearchService (
     private val logger = LoggerFactory.getLogger(DocumentSearchService::class.java)
 
     fun search(
+        userId: UUID,
         query: String,
         limit: Int = 10,
         minimumScore: Float? = 0.5f
@@ -28,6 +30,7 @@ class DocumentSearchService (
         val future = CompletableFuture.supplyAsync(
             {
                 searchBlocking(
+                    userId = userId,
                     query = query,
                     limit = limit,
                     minimumScore = minimumScore
@@ -40,13 +43,14 @@ class DocumentSearchService (
     }
 
     private fun searchBlocking(
+        userId: UUID,
         query: String,
         limit: Int,
         minimumScore: Float?
     ): List<VectorSearchMatch> {
         val embedding = embeddingService.embedText(query)
         logger.info("Embedding of $query is $embedding")
-        return vectorStorage.search(query, embedding, limit, minimumScore)
+        return vectorStorage.search(userId, query, embedding, limit, minimumScore)
     }
 
     private fun getSearchResults(

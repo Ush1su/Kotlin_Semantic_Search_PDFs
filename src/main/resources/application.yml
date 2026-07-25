@@ -38,5 +38,8 @@ app:
     dimensions: ${EMBEDDING_DIMENSIONS:512}
     max-concurrent-batches: ${EMBEDDING_MAX_CONCURRENT_BATCHES:2}
 
+  auth:
+    dev-user-id: 00000000-0000-0000-0000-000000000001
+
 server:
   port: 8080

@@ -4,6 +4,7 @@ import org.ai_processor.processing.chunking.PdfChunk
 import org.ai_processor.processing.embeddings.config.EmbeddingProperties
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
@@ -61,11 +62,12 @@ class EmbeddingService (
         }
     }
 
-    fun embedPdfChunks(chunks: List<PdfChunk>) : List<EmbeddedChunk> {
+    fun embedPdfChunks(userId: UUID, chunks: List<PdfChunk>) : List<EmbeddedChunk> {
         val chunkTexts = chunks.map { it.text }
         val embeddings = generateEmbeddings(chunkTexts)
         return chunks.zip(embeddings).map { (chunk, embedding) ->
             EmbeddedChunk(
+                userId = userId,
                 chunkId = chunk.id,
                 text = chunk.text,
                 documentId = chunk.documentId,

@@ -6,6 +6,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.EnumType
+import jakarta.persistence.Index
 import java.time.Instant
 import java.util.UUID
 
@@ -17,10 +18,13 @@ enum class DocumentStatus {
 }
 
 @Entity
-@Table(name = "documents")
+@Table(name = "documents", indexes = [Index(name = "documents_user_id_idx", columnList = "user_id")])
 class DocumentEntity(
     @Id
     val id: UUID,
+
+    @Column(name = "user_id", nullable = false)
+    val userId: UUID,
 
     @Column(name = "original_filename", nullable = false)
     val originalFilename: String,

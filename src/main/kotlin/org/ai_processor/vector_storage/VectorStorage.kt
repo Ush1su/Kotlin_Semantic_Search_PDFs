@@ -6,8 +6,9 @@ import java.util.UUID
 
 interface VectorStorage {
     fun saveAll(chunks: List<EmbeddedChunk>)
-    fun deleteAllByDocumentId(documentId: UUID)
+    fun deleteAllByDocumentIdAndUserId(userId: UUID, documentId: UUID)
     fun search(
+        userId: UUID,
         query: String,
         vector: List<Float>,
         limit: Int,

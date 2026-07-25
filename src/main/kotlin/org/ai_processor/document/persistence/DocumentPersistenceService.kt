@@ -31,6 +31,11 @@ class DocumentPersistenceService(
         return documentRepository.findByIdOrNull(id)
     }
 
+    @Transactional(readOnly = true)
+    fun getDocumentByIdAndUserId(id: UUID, userId: UUID) : DocumentEntity? {
+        return documentRepository.findByIdAndUserId(id, userId)
+    }
+
     @Transactional
     fun markProcessing(documentId: UUID) {
         val document = getDocumentById(documentId) ?: throw DocumentNotFoundException(documentId)
@@ -56,19 +61,21 @@ class DocumentPersistenceService(
     }
 
     @Transactional
-    fun deleteDocumentData(documentId: UUID) {
+    fun deleteDocumentData(documentId: UUID, userId: UUID) {
+        getDocumentByIdAndUserId(documentId, userId) ?: throw DocumentNotFoundException(documentId)
         documentChunkRepository.deleteByDocumentId(documentId)
         documentRepository.deleteById(documentId)
     }
 
     @Transactional(readOnly = true)
-    fun getStoragePath(documentId: UUID): String {
-        val document = documentRepository.findByIdOrNull(documentId) ?: throw DocumentNotFoundException(documentId)
+    fun getStoragePath(documentId: UUID, userId: UUID): String {
+        val document = documentRepository.findByIdAndUserId(documentId, userId) ?: throw DocumentNotFoundException(documentId)
         return document.storagePath
     }
 
     @Transactional(readOnly = true)
-    fun getChunksByDocumentId(documentId: UUID): List<DocumentChunkEntity> {
+    fun getChunksByDocumentIdAndUserId(documentId: UUID, userId: UUID): List<DocumentChunkEntity> {
+        getDocumentByIdAndUserId(documentId, userId) ?: throw DocumentNotFoundException(documentId)
         return documentChunkRepository.findByDocumentIdOrderByChunkIndex(documentId)
     }
 }

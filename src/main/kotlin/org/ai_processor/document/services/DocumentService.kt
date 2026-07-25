@@ -21,7 +21,7 @@ class DocumentService(
 ) {
     private val logger = LoggerFactory.getLogger(DocumentService::class.java)
 
-    fun upload(file: MultipartFile): UUID {
+    fun upload(file: MultipartFile, userId: UUID): UUID {
         if (file.isEmpty) {
             throw EmptyDocumentUploadException()
         }
@@ -44,6 +44,7 @@ class DocumentService(
 
         val documentEntity = DocumentEntity(
             id = documentId,
+            userId = userId,
             originalFilename = originalFilename,
             contentType = file.contentType ?: "application/pdf",
             fileSizeBytes = bytes.size.toLong(),
@@ -53,16 +54,16 @@ class DocumentService(
         )
         documentPersistenceService.saveDocument(documentEntity)
         logger.info("Document uploaded: $documentId")
-        processDocumentService.process(documentId, storagePath)
+        processDocumentService.process(documentId, storagePath, userId)
         logger.info("Document processing started: $documentId")
         return documentId
     }
 
-    fun delete(documentId: UUID) {
-        val storagePath = documentPersistenceService.getStoragePath(documentId)
+    fun delete(documentId: UUID, userId: UUID) {
+        val storagePath = documentPersistenceService.getStoragePath(documentId, userId)
 
         fileStorage.delete(storagePath)
-        documentPersistenceService.deleteDocumentData(documentId)
-        vectorStorage.deleteAllByDocumentId(documentId)
+        documentPersistenceService.deleteDocumentData(documentId, userId)
+        vectorStorage.deleteAllByDocumentIdAndUserId(userId, documentId)
     }
 }

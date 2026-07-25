@@ -1,5 +1,6 @@
 package org.ai_processor.document.api
 
+import org.ai_processor.auth.CurrentUserProvider
 import org.ai_processor.document.api.model.DocumentChunkResponse
 import org.ai_processor.document.api.model.DocumentResponse
 import org.ai_processor.document.api.model.DocumentUploadResponse
@@ -15,7 +16,8 @@ import java.util.UUID
 @RequestMapping("/documents")
 class DocumentController(
     private val documentService: DocumentService,
-    private val documentPersistenceService: DocumentPersistenceService
+    private val documentPersistenceService: DocumentPersistenceService,
+    private val currentUserProvider: CurrentUserProvider
 ) {
 
     @PostMapping
@@ -23,7 +25,8 @@ class DocumentController(
     fun uploadDocument(
         @RequestParam("file") file: MultipartFile
     ): DocumentUploadResponse {
-        val documentId = documentService.upload(file)
+        val userId = currentUserProvider.currentUserId()
+        val documentId = documentService.upload(file, userId)
 
         return DocumentUploadResponse(
             documentId = documentId,
@@ -35,7 +38,8 @@ class DocumentController(
     fun getDocument(
         @PathVariable documentId: UUID
     ): DocumentResponse {
-        val document = documentPersistenceService.getDocumentById(documentId)
+        val userId = currentUserProvider.currentUserId()
+        val document = documentPersistenceService.getDocumentByIdAndUserId(documentId, userId)
             ?: throw DocumentNotFoundException(documentId)
 
         return DocumentResponse(
@@ -55,7 +59,8 @@ class DocumentController(
     fun getDocumentChunks(
         @PathVariable documentId: UUID
     ): List<DocumentChunkResponse> {
-        return documentPersistenceService.getChunksByDocumentId(documentId)
+        val userId = currentUserProvider.currentUserId()
+        return documentPersistenceService.getChunksByDocumentIdAndUserId(documentId, userId)
             .map { chunk ->
                 DocumentChunkResponse(
                     id = chunk.id,
@@ -73,6 +78,7 @@ class DocumentController(
     fun deleteDocument(
         @PathVariable documentId: UUID
     ) {
-        documentService.delete(documentId)
+        val userId = currentUserProvider.currentUserId()
+        documentService.delete(documentId, userId)
     }
 }
