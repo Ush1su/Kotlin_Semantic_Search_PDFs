@@ -1,6 +1,8 @@
 package org.ai_processor.document.persistence.repository
 
 import org.ai_processor.document.persistence.model.DocumentEntity
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
@@ -16,8 +18,8 @@ interface DocumentRepository : JpaRepository<DocumentEntity, UUID> {
         userId: UUID
     ): DocumentEntity?
 
-    fun deleteByIdAndUserId(
-        id: UUID,
-        userId: UUID
-    ): Unit
+    fun findAllByUserId(
+        userId: UUID,
+        pageable: Pageable
+    ): Page<DocumentEntity>
 }

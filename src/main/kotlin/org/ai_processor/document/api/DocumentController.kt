@@ -9,6 +9,9 @@ import org.ai_processor.document.services.DocumentService
 import org.ai_processor.document.persistence.DocumentPersistenceService
 import org.ai_processor.storage.FileStorage
 import org.springframework.core.io.Resource
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -39,6 +42,29 @@ class DocumentController(
             documentId = documentId,
             status = "UPLOADED"
         )
+    }
+
+    @GetMapping
+    fun getDocuments(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ) : Page<DocumentResponse> {
+        val userId = currentUserProvider.currentUserId()
+        val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+
+        return documentPersistenceService.getDocumentsByUserId(userId, pageable)
+            .map {document ->
+                DocumentResponse(
+                    id = document.id,
+                    originalFilename = document.originalFilename,
+                    contentType = document.contentType,
+                    fileSizeBytes = document.fileSizeBytes,
+                    status = document.status,
+                    errorMessage = document.errorMessage,
+                    createdAt = document.createdAt.toString(),
+                    processedAt = document.processedAt.toString(),
+                )
+            }
     }
 
     @GetMapping("/{documentId}")

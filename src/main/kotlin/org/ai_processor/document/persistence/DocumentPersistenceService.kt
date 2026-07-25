@@ -5,6 +5,8 @@ import org.ai_processor.document.persistence.model.DocumentEntity
 import org.ai_processor.document.persistence.model.DocumentStatus
 import org.ai_processor.document.persistence.repository.DocumentChunkRepository
 import org.ai_processor.document.persistence.repository.DocumentRepository
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -77,5 +79,10 @@ class DocumentPersistenceService(
     fun getChunksByDocumentIdAndUserId(documentId: UUID, userId: UUID): List<DocumentChunkEntity> {
         getDocumentByIdAndUserId(documentId, userId) ?: throw DocumentNotFoundException(documentId)
         return documentChunkRepository.findByDocumentIdOrderByChunkIndex(documentId)
+    }
+
+    @Transactional(readOnly = true)
+    fun getDocumentsByUserId(userId: UUID, pageable: Pageable): Page<DocumentEntity> {
+        return documentRepository.findAllByUserId(userId, pageable)
     }
 }
