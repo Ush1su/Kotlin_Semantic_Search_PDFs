@@ -9,6 +9,7 @@ interface VectorStorage {
     fun deleteAllByDocumentIdAndUserId(userId: UUID, documentId: UUID)
     fun search(
         userId: UUID,
+        documentId: UUID?,
         query: String,
         vector: List<Float>,
         limit: Int,

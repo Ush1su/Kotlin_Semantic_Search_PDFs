@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/search")
@@ -20,6 +21,7 @@ class DocumentSearchController(
     @GetMapping
     fun search(
         @RequestParam query: String,
+        @RequestParam documentId: UUID? = null,
         @RequestParam(defaultValue = "10") limit: Int,
         @RequestParam(required = false) minimumScore: Float?
     ): DocumentSearchResponse {
@@ -27,6 +29,7 @@ class DocumentSearchController(
 
         val vectorSearchOutput = documentSearchService.search(
             userId = userId,
+            documentId = documentId,
             query = query,
             limit = limit,
             minimumScore = minimumScore

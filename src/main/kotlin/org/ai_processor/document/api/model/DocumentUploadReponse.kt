@@ -13,7 +13,6 @@ data class DocumentResponse(
     val originalFilename: String,
     val contentType: String,
     val fileSizeBytes: Long,
-    val storagePath: String,
     val status: DocumentStatus,
     val errorMessage: String?,
     val createdAt: String,

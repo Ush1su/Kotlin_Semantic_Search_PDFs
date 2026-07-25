@@ -7,7 +7,13 @@ import org.ai_processor.document.api.model.DocumentUploadResponse
 import org.ai_processor.document.persistence.DocumentNotFoundException
 import org.ai_processor.document.services.DocumentService
 import org.ai_processor.document.persistence.DocumentPersistenceService
+import org.ai_processor.storage.FileStorage
+import org.springframework.core.io.Resource
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
@@ -17,7 +23,8 @@ import java.util.UUID
 class DocumentController(
     private val documentService: DocumentService,
     private val documentPersistenceService: DocumentPersistenceService,
-    private val currentUserProvider: CurrentUserProvider
+    private val currentUserProvider: CurrentUserProvider,
+    private val fileStorage: FileStorage
 ) {
 
     @PostMapping
@@ -47,12 +54,30 @@ class DocumentController(
             originalFilename = document.originalFilename,
             contentType = document.contentType,
             fileSizeBytes = document.fileSizeBytes,
-            storagePath = document.storagePath,
             status = document.status,
             errorMessage = document.errorMessage,
             createdAt = document.createdAt.toString(),
             processedAt = document.processedAt?.toString()
         )
+    }
+
+    @GetMapping("/{documentId}/file")
+    fun getDocumentFile(
+        @PathVariable documentId: UUID
+    ): ResponseEntity<Resource> {
+        val userId = currentUserProvider.currentUserId()
+        val document = documentPersistenceService.getDocumentByIdAndUserId(documentId, userId)
+            ?: throw DocumentNotFoundException(documentId)
+
+        val resource = fileStorage.loadAsResource(document.storagePath)
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                ContentDisposition.inline().filename(document.originalFilename).build().toString()
+            )
+            .body(resource)
     }
 
     @GetMapping("/{documentId}/chunks")

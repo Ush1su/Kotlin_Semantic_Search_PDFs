@@ -23,6 +23,7 @@ class DocumentSearchService (
 
     fun search(
         userId: UUID,
+        documentId: UUID? = null,
         query: String,
         limit: Int = 10,
         minimumScore: Float? = 0.5f
@@ -31,6 +32,7 @@ class DocumentSearchService (
             {
                 searchBlocking(
                     userId = userId,
+                    documentId = documentId,
                     query = query,
                     limit = limit,
                     minimumScore = minimumScore
@@ -44,13 +46,14 @@ class DocumentSearchService (
 
     private fun searchBlocking(
         userId: UUID,
+        documentId: UUID?,
         query: String,
         limit: Int,
         minimumScore: Float?
     ): List<VectorSearchMatch> {
         val embedding = embeddingService.embedText(query)
         logger.info("Embedding of $query is $embedding")
-        return vectorStorage.search(userId, query, embedding, limit, minimumScore)
+        return vectorStorage.search(userId, documentId, query, embedding, limit, minimumScore)
     }
 
     private fun getSearchResults(

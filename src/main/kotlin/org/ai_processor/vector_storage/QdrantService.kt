@@ -84,6 +84,7 @@ class QdrantService(
 
     override fun search(
         userId: UUID,
+        documentId: UUID?,
         query: String,
         vector: List<Float>,
         limit: Int,
@@ -95,19 +96,27 @@ class QdrantService(
             .addMust(matchKeyword(USER_ID_PAYLOAD, userId.toString()))
             .build()
 
+        val documentFilter = documentId?.let {
+            Filter.newBuilder()
+                .addMust(matchKeyword(DOCUMENT_ID_PAYLOAD, it.toString()))
+                .build()
+        }
+
         val densePrefetch = prefetch(
             query = nearest(vector),
             using = properties.denseVectorName,
             limit = hybridPrefetchLimit(limit),
             minimumScore = minimumScore,
-            filter = userFilter
+            filter = userFilter,
+            documentFilter = documentFilter
         )
         val lexicalPrefetch = prefetch(
             query = nearest(bm25DocumentFactory.document(query)),
             using = properties.bm25VectorName,
             limit = hybridPrefetchLimit(limit),
             minimumScore = null,
-            filter = userFilter
+            filter = userFilter,
+            documentFilter = documentFilter
         )
 
         val request = QueryPoints.newBuilder()
@@ -244,7 +253,8 @@ class QdrantService(
         using: String,
         limit: Int,
         minimumScore: Float?,
-        filter: Filter? = null
+        filter: Filter? = null,
+        documentFilter: Filter? = null
     ): PrefetchQuery {
         return PrefetchQuery.newBuilder()
             .setQuery(query)
@@ -253,6 +263,7 @@ class QdrantService(
             .apply {
                 minimumScore?.let(::setScoreThreshold)
                 filter?.let(::setFilter)
+                documentFilter?.let(::setFilter)
             }
             .build()
     }
