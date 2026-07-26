@@ -4,7 +4,8 @@ import org.ai_processor.auth.CurrentUserProvider
 import org.ai_processor.document.api.model.DocumentChunkResponse
 import org.ai_processor.document.api.model.DocumentResponse
 import org.ai_processor.document.api.model.DocumentUploadResponse
-import org.ai_processor.document.persistence.DocumentNotFoundException
+import org.ai_processor.document.api.model.HighlightChunkResponse
+import org.ai_processor.document.persistence.exceptions.DocumentNotFoundException
 import org.ai_processor.document.services.DocumentService
 import org.ai_processor.document.persistence.DocumentPersistenceService
 import org.ai_processor.storage.FileStorage
@@ -122,6 +123,20 @@ class DocumentController(
                     pageEnd = chunk.pageEnd
                 )
             }
+    }
+
+    @GetMapping("/chunks/{chunkId}")
+    fun getDocumentChunk(
+        @PathVariable chunkId: UUID
+    ) : HighlightChunkResponse {
+        val userId = currentUserProvider.currentUserId()
+        val chunk = documentPersistenceService.getChunkByIdAndUserId(chunkId, userId)
+        return HighlightChunkResponse(
+            chunkId = chunk.id,
+            documentId = chunk.documentId,
+            text = chunk.text,
+            highlight = chunk.highlightRects
+        )
     }
 
     @DeleteMapping("/{documentId}")

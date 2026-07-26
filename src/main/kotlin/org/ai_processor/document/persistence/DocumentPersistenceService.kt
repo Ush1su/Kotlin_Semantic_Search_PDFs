@@ -1,5 +1,7 @@
 package org.ai_processor.document.persistence
 
+import org.ai_processor.document.persistence.exceptions.ChunkNotFoundException
+import org.ai_processor.document.persistence.exceptions.DocumentNotFoundException
 import org.ai_processor.document.persistence.model.DocumentChunkEntity
 import org.ai_processor.document.persistence.model.DocumentEntity
 import org.ai_processor.document.persistence.model.DocumentStatus
@@ -71,7 +73,9 @@ class DocumentPersistenceService(
 
     @Transactional(readOnly = true)
     fun getStoragePath(documentId: UUID, userId: UUID): String {
-        val document = documentRepository.findByIdAndUserId(documentId, userId) ?: throw DocumentNotFoundException(documentId)
+        val document = documentRepository.findByIdAndUserId(documentId, userId) ?: throw DocumentNotFoundException(
+            documentId
+        )
         return document.storagePath
     }
 
@@ -84,5 +88,12 @@ class DocumentPersistenceService(
     @Transactional(readOnly = true)
     fun getDocumentsByUserId(userId: UUID, pageable: Pageable): Page<DocumentEntity> {
         return documentRepository.findAllByUserId(userId, pageable)
+    }
+
+    @Transactional(readOnly = true)
+    fun getChunkByIdAndUserId(chunkId: UUID, userId: UUID): DocumentChunkEntity {
+        val chunk = documentChunkRepository.findByIdOrNull(chunkId) ?: throw ChunkNotFoundException(chunkId)
+        getDocumentByIdAndUserId(chunk.documentId, userId) ?: throw ChunkNotFoundException(chunkId)
+        return chunk
     }
 }

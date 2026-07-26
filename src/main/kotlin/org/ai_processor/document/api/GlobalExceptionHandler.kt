@@ -1,6 +1,7 @@
 package org.ai_processor.document.api
 
-import org.ai_processor.document.persistence.DocumentNotFoundException
+import org.ai_processor.document.persistence.exceptions.ChunkNotFoundException
+import org.ai_processor.document.persistence.exceptions.DocumentNotFoundException
 import org.ai_processor.document.services.DocumentUploadException
 import org.ai_processor.document.services.UnsupportedDocumentContentTypeException
 import org.ai_processor.processing.embeddings.EmbeddingException
@@ -22,6 +23,15 @@ class GlobalExceptionHandler {
         return ResponseEntity
             .status(HttpStatus.NOT_FOUND)
             .body(exception.message ?: "Document not found")
+    }
+
+    @ExceptionHandler(ChunkNotFoundException::class)
+    fun handleChunkNotFound(
+        exception: ChunkNotFoundException
+    ): ResponseEntity<String> {
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(exception.message ?: "Chunk not found")
     }
 
     @ExceptionHandler(UnsupportedDocumentContentTypeException::class)

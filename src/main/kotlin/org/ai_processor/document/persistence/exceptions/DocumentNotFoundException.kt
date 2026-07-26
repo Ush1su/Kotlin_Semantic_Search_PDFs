@@ -1,4 +1,4 @@
-package org.ai_processor.document.persistence
+package org.ai_processor.document.persistence.exceptions
 
 import java.util.UUID
 

@@ -1,5 +1,7 @@
 package org.ai_processor.document.persistence
 
+import org.ai_processor.document.persistence.exceptions.ChunkNotFoundException
+import org.ai_processor.document.persistence.exceptions.DocumentNotFoundException
 import org.ai_processor.document.persistence.model.DocumentChunkEntity
 import org.ai_processor.document.persistence.model.DocumentEntity
 import org.ai_processor.document.persistence.model.DocumentStatus
@@ -192,6 +194,36 @@ class DocumentPersistenceServiceTest {
 
         assertFailsWith<DocumentNotFoundException> {
             persistenceService.getChunksByDocumentIdAndUserId(documentId, userId)
+        }
+    }
+
+    @Test
+    fun `getChunkByIdAndUserId returns chunk when its document belongs to the user`() {
+        val document = documentEntity()
+        val chunk = documentChunkEntity(documentId = document.id, chunkIndex = 1)
+        `when`(chunkRepository.findById(chunk.id))
+            .thenReturn(Optional.of(chunk))
+        `when`(documentRepository.findByIdAndUserId(document.id, document.userId))
+            .thenReturn(document)
+
+        val found = persistenceService.getChunkByIdAndUserId(chunk.id, document.userId)
+
+        assertEquals(chunk, found)
+    }
+
+
+    @Test
+    fun `getChunkByIdAndUserId throws ChunkNotFoundException when chunk's document does not belong to the user`() {
+        val document = documentEntity()
+        val chunk = documentChunkEntity(documentId = document.id, chunkIndex = 1)
+        val otherUserId = UUID.randomUUID()
+        `when`(chunkRepository.findById(chunk.id))
+            .thenReturn(Optional.of(chunk))
+        `when`(documentRepository.findByIdAndUserId(document.id, otherUserId))
+            .thenReturn(null)
+
+        assertFailsWith<ChunkNotFoundException> {
+            persistenceService.getChunkByIdAndUserId(chunk.id, otherUserId)
         }
     }
 
