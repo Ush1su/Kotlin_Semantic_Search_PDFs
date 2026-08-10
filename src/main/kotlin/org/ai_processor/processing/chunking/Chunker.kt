@@ -1,7 +1,6 @@
 package org.ai_processor.processing.chunking
 
 import org.ai_processor.processing.pdfreader.ParsedPDF
-import org.ai_processor.processing.pdfreader.TextBlock
 import org.springframework.stereotype.Component
 import java.util.UUID
 

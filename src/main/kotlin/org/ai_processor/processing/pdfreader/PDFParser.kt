@@ -1,102 +1,174 @@
 package org.ai_processor.processing.pdfreader
 
-import org.apache.pdfbox.Loader
-import org.apache.pdfbox.pdmodel.PDPage
+import org.ai_processor.processing.pdfreader.parsers.BlockParser
+import org.ai_processor.processing.pdfreader.parsers.CaptionBlockParser
+import org.ai_processor.processing.pdfreader.parsers.HeadingBlockParser
+import org.ai_processor.processing.pdfreader.parsers.ListBlockParser
+import org.ai_processor.processing.pdfreader.parsers.ParagraphBlockParser
+import org.ai_processor.processing.pdfreader.parsers.TableBlockParser
+import org.opendataloader.pdf.api.Config
+import org.opendataloader.pdf.api.OpenDataLoaderPDF
 import org.springframework.stereotype.Service
-import java.io.IOException
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.json.JsonMapper
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
-import kotlin.math.abs
 
 @Service
-class PDFParser {
-    fun parse(filepath: Path, documentId: UUID): ParsedPDF {
-        val pages = mutableListOf<ParsedPage>()
+class PDFParser(
+    private val jsonMapper: JsonMapper
+) {
+
+    private val tempRoot = Path.of(DEFAULT_TEMP_DIRECTORY)
+
+    /** The block types the reader supports, keyed by OpenDataLoader node type. */
+    private val blockParsers: Map<String, BlockParser> = listOf(
+        ParagraphBlockParser,
+        HeadingBlockParser,
+        CaptionBlockParser,
+        ListBlockParser,
+        TableBlockParser
+    ).associateBy { it.nodeType }
+
+    fun parse(
+        filepath: Path,
+        documentId: UUID
+    ): ParsedPDF {
+        Files.createDirectories(tempRoot)
+
+        val tempDirectory = Files.createTempDirectory(
+            tempRoot,
+            "$documentId-"
+        )
+
         try {
-            Loader.loadPDF(filepath.toFile()).use { document ->
-                for (pageIndex in 0 until document.numberOfPages) {
-                    val pageNumber = pageIndex + 1
-                    val page: PDPage = document.getPage(pageIndex)
-                    val mediaBox = page.mediaBox
-                    val width = mediaBox.width
-                    val height = mediaBox.height
-                    val stripper = PDFStripper(pageNumber)
-                    stripper.getText(document)
-                    val rawPieces = stripper.textPieces
-                    pages.add(buildParsedPage(pageNumber, width, height, rawPieces))
-                }
-            }
-        } catch (exception: IOException) {
+            parseWithOpenDataLoader(
+                filepath = filepath,
+                outputDirectory = tempDirectory
+            )
+
+            val jsonPath = getJsonPath(
+                filepath = filepath,
+                outputDirectory = tempDirectory
+            )
+
+            val root = jsonMapper.readTree(jsonPath.toFile())
+
+            return buildParsedPdf(
+                root = root,
+                documentId = documentId
+            )
+        } catch (exception: Exception) {
             throw PdfParsingException(
                 message = "Failed to parse PDF: $filepath",
                 cause = exception
             )
+        } finally {
+            deleteDirectory(tempDirectory)
         }
+    }
+
+    private fun parseWithOpenDataLoader(
+        filepath: Path,
+        outputDirectory: Path
+    ) {
+        val config = Config().apply {
+            setOutputFolder(outputDirectory.toString())
+            setGenerateJSON(true)
+            setGenerateMarkdown(false)
+            setGenerateHtml(false)
+            setGeneratePDF(false)
+        }
+
+        OpenDataLoaderPDF.processFile(
+            filepath.toAbsolutePath().toString(),
+            config
+        )
+    }
+
+    private fun buildParsedPdf(
+        root: JsonNode,
+        documentId: UUID
+    ): ParsedPDF {
+        val blocks = root[OdlJson.KIDS]
+            ?.asSequence()
+            ?.flatMap { collectBlockNodes(it) }
+            ?.mapIndexed { index, node -> parseBlock(node, index) }
+            ?.toList()
+            ?: emptyList()
+
         return ParsedPDF(
             documentId = documentId,
-            pages = pages
+            numberOfPages = root[OdlJson.NUMBER_OF_PAGES].asInt(),
+            title = root[OdlJson.TITLE]?.takeUnless { it.isNull }?.asString(),
+            author = root[OdlJson.AUTHOR]?.takeUnless { it.isNull }?.asString(),
+            blocks = blocks
         )
     }
 
-    private fun buildParsedPage(
-        pageNumber: Int,
-        width: Float,
-        height: Float,
-        rawPieces: List<RawTextPiece>
-    ) : ParsedPage{
-        val rawLines: List<List<RawTextPiece>> = groupByApproximateY(rawPieces, tolerance = 2.0f)
+    private fun parseBlock(
+        node: JsonNode,
+        blockIndex: Int
+    ): ParsedBlock {
+        val nodeType = node[OdlJson.TYPE]?.asString()
 
-        val textBlocks = rawLines.mapIndexed { index, pieces ->
-            val text = pieces.joinToString(separator = "") { it.value }
+        val parser = blockParsers[nodeType]
+            ?: throw PdfParsingException("Unsupported block type: $nodeType")
 
-            val minX = pieces.minOf { it.x }
-            val maxX = pieces.maxOf { it.x + it.width }
-            val minY = pieces.minOf { it.y }
-            val maxY = pieces.maxOf { it.y + it.height }
-            val bbox = BoundingBox(
-                x = minX,
-                y = minY,
-                width = maxX - minX,
-                height = maxY - minY
-            )
-            TextBlock(
-                blockIndex = index,
-                pageNumber = pageNumber,
-                text = text,
-                bbox = bbox
-            )
+        return parser.parse(node, blockIndex)
+    }
+
+    /**
+     * Walks the tree and keeps the nodes a block parser is registered for.
+     * A text block only groups other nodes, so it contributes its kids rather
+     * than itself. Anything else is not part of the extracted document.
+     */
+    private fun collectBlockNodes(
+        node: JsonNode
+    ): Sequence<JsonNode> {
+        val nodeType = node[OdlJson.TYPE]?.asString()
+
+        return when {
+            nodeType in blockParsers -> sequenceOf(node)
+
+            nodeType == OdlJson.TEXT_BLOCK ->
+                node[OdlJson.KIDS]
+                    ?.asSequence()
+                    ?.flatMap { collectBlockNodes(it) }
+                    ?: emptySequence()
+
+            else -> emptySequence()
         }
+    }
 
-        return ParsedPage(
-            pageNumber = pageNumber,
-            width = width,
-            height = height,
-            textBlocks = textBlocks
+    private fun getJsonPath(
+        filepath: Path,
+        outputDirectory: Path
+    ): Path {
+        val filename = filepath.fileName.toString()
+
+        val filenameWithoutExtension =
+            filename.substringBeforeLast('.')
+
+        return outputDirectory.resolve(
+            "$filenameWithoutExtension.json"
         )
     }
 
-    private fun groupByApproximateY(
-        pieces: List<RawTextPiece>,
-        tolerance: Float = 2.0f
-    ): List<List<RawTextPiece>> {
-        val sorted = pieces.sortedWith(compareBy<RawTextPiece> { it.y }.thenBy { it.x })
-
-        val lines = mutableListOf<MutableList<RawTextPiece>>()
-
-        for (piece in sorted) {
-            val line = lines.firstOrNull { existingLine ->
-                abs(existingLine.first().y - piece.y) <= tolerance
-            }
-
-            if (line != null) {
-                line.add(piece)
-            } else {
-                lines.add(mutableListOf(piece))
-            }
+    private fun deleteDirectory(directory: Path) {
+        if (!Files.exists(directory)) {
+            return
         }
 
-        return lines.map { line ->
-            line.sortedBy { it.x }
+        Files.walk(directory).use { paths ->
+            paths
+                .sorted(Comparator.reverseOrder())
+                .forEach(Files::delete)
         }
+    }
+
+    companion object {
+        const val DEFAULT_TEMP_DIRECTORY = "temp"
     }
 }
