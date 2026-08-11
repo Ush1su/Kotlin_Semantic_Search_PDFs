@@ -12,12 +12,12 @@ import org.ai_processor.processing.embeddings.EmbeddingClient
 import org.ai_processor.processing.embeddings.EmbeddingService
 import org.ai_processor.processing.embeddings.config.EmbeddingProperties
 import org.ai_processor.processing.pdfreader.BoundingBox
-import org.ai_processor.processing.pdfreader.ParsedPDF
-import org.ai_processor.processing.pdfreader.ParsedPage
 import org.ai_processor.processing.pdfreader.PDFParser
+import org.ai_processor.processing.pdfreader.ParsedPDF
 import org.ai_processor.vector_storage.VectorStorage
 import org.ai_processor.vector_storage.model.VectorSearchMatch
 import org.mockito.Mockito.mock
+import tools.jackson.databind.json.JsonMapper
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.test.Test
@@ -32,11 +32,8 @@ class ProcessDocumentServiceTest {
         val documentId = UUID.randomUUID()
         val userId = UUID.randomUUID()
         val storagePath = "/tmp/document.pdf"
-        val parsedPDF = ParsedPDF(
-            documentId = documentId,
-            pages = listOf(ParsedPage(1, 612f, 792f, emptyList()))
-        )
-        val chunks = listOf(pdfChunk(documentId, chunkIndex = 1))
+        val parsedPDF = ParsedPDF(documentId, numberOfPages = 1, title = null, author = null, blocks = emptyList())
+        val chunks = listOf(pdfChunk(documentId, chunkIndex = 0))
         val embeddedChunks = listOf(
             EmbeddedChunk(
                 userId = userId,
@@ -60,15 +57,7 @@ class ProcessDocumentServiceTest {
         service.process(documentId, storagePath, userId)
 
         assertEquals(
-            listOf(
-                "markProcessing",
-                "parse",
-                "chunk",
-                "saveChunks",
-                "embed",
-                "saveVectors",
-                "markReady"
-            ),
+            listOf("markProcessing", "parse", "chunk", "saveChunks", "embed", "saveVectors", "markReady"),
             events
         )
         assertEquals(documentId, persistence.processingDocumentIds.single())
@@ -91,41 +80,32 @@ class ProcessDocumentServiceTest {
     fun `process marks document failed when PDF parsing fails`() {
         val events = mutableListOf<String>()
         val documentId = UUID.randomUUID()
-        val userId = UUID.randomUUID()
-        val storagePath = "/tmp/broken.pdf"
         val failure = RuntimeException("cannot parse")
         val persistence = RecordingDocumentPersistenceService(events)
-        val vectorStorage = RecordingVectorStorage(events)
         val service = processDocumentService(
             persistence = persistence,
             embeddingService = RecordingEmbeddingService(events, emptyList()),
-            vectorStorage = vectorStorage,
+            vectorStorage = RecordingVectorStorage(events),
             pdfParser = RecordingPDFParser(events, failure = failure),
             chunker = RecordingChunker(events, emptyList())
         )
 
         val thrown = assertFailsWith<RuntimeException> {
-            service.process(documentId, storagePath, userId)
+            service.process(documentId, "/tmp/broken.pdf", UUID.randomUUID())
         }
 
         assertSame(failure, thrown)
         assertEquals(listOf("markProcessing", "parse", "markFailed"), events)
-        assertEquals(listOf(documentId), persistence.processingDocumentIds)
-        assertEquals(
-            listOf<Pair<UUID, String?>>(documentId to "cannot parse"),
-            persistence.failedDocuments
-        )
+        assertEquals(listOf<Pair<UUID, String?>>(documentId to "cannot parse"), persistence.failedDocuments)
         assertEquals(0, persistence.savedChunks.size)
-        assertEquals(0, vectorStorage.savedBatches.size)
     }
 
     @Test
     fun `process marks document failed when embedding fails`() {
         val events = mutableListOf<String>()
         val documentId = UUID.randomUUID()
-        val userId = UUID.randomUUID()
-        val parsedPDF = ParsedPDF(documentId, emptyList())
-        val chunks = listOf(pdfChunk(documentId, chunkIndex = 1))
+        val parsedPDF = ParsedPDF(documentId, numberOfPages = 0, title = null, author = null, blocks = emptyList())
+        val chunks = listOf(pdfChunk(documentId, chunkIndex = 0))
         val failure = RuntimeException("embedding unavailable")
         val persistence = RecordingDocumentPersistenceService(events)
         val vectorStorage = RecordingVectorStorage(events)
@@ -138,18 +118,12 @@ class ProcessDocumentServiceTest {
         )
 
         val thrown = assertFailsWith<RuntimeException> {
-            service.process(documentId, "/tmp/document.pdf", userId)
+            service.process(documentId, "/tmp/document.pdf", UUID.randomUUID())
         }
 
         assertSame(failure, thrown)
-        assertEquals(
-            listOf("markProcessing", "parse", "chunk", "saveChunks", "embed", "markFailed"),
-            events
-        )
-        assertEquals(
-            listOf<Pair<UUID, String?>>(documentId to "embedding unavailable"),
-            persistence.failedDocuments
-        )
+        assertEquals(listOf("markProcessing", "parse", "chunk", "saveChunks", "embed", "markFailed"), events)
+        assertEquals(listOf<Pair<UUID, String?>>(documentId to "embedding unavailable"), persistence.failedDocuments)
         assertEquals(0, vectorStorage.savedBatches.size)
     }
 
@@ -158,8 +132,8 @@ class ProcessDocumentServiceTest {
         val events = mutableListOf<String>()
         val documentId = UUID.randomUUID()
         val userId = UUID.randomUUID()
-        val parsedPDF = ParsedPDF(documentId, emptyList())
-        val chunks = listOf(pdfChunk(documentId, chunkIndex = 1))
+        val parsedPDF = ParsedPDF(documentId, numberOfPages = 0, title = null, author = null, blocks = emptyList())
+        val chunks = listOf(pdfChunk(documentId, chunkIndex = 0))
         val embeddedChunks = listOf(
             EmbeddedChunk(
                 userId = userId,
@@ -185,21 +159,10 @@ class ProcessDocumentServiceTest {
 
         assertSame(failure, thrown)
         assertEquals(
-            listOf(
-                "markProcessing",
-                "parse",
-                "chunk",
-                "saveChunks",
-                "embed",
-                "saveVectors",
-                "markFailed"
-            ),
+            listOf("markProcessing", "parse", "chunk", "saveChunks", "embed", "saveVectors", "markFailed"),
             events
         )
-        assertEquals(
-            listOf<Pair<UUID, String?>>(documentId to "qdrant unavailable"),
-            persistence.failedDocuments
-        )
+        assertEquals(listOf<Pair<UUID, String?>>(documentId to "qdrant unavailable"), persistence.failedDocuments)
     }
 
     private fun processDocumentService(
@@ -208,40 +171,28 @@ class ProcessDocumentServiceTest {
         vectorStorage: VectorStorage,
         pdfParser: PDFParser,
         chunker: Chunker
-    ): ProcessDocumentService {
-        return ProcessDocumentService(
-            documentPersistenceService = persistence,
-            embeddingService = embeddingService,
-            vectorStorage = vectorStorage,
-            pdfParser = pdfParser,
-            chunker = chunker
-        )
-    }
+    ) = ProcessDocumentService(
+        documentPersistenceService = persistence,
+        embeddingService = embeddingService,
+        vectorStorage = vectorStorage,
+        pdfParser = pdfParser,
+        chunker = chunker
+    )
 
-    private fun pdfChunk(
-        documentId: UUID,
-        chunkIndex: Int
-    ): PdfChunk {
-        return PdfChunk(
-            id = UUID.randomUUID(),
-            documentId = documentId,
-            chunkIndex = chunkIndex,
-            text = "chunk text $chunkIndex",
-            pageStart = 1,
-            pageEnd = 1,
-            highlightRects = listOf(
-                HighlightRect(
-                    pageNumber = 1,
-                    bbox = BoundingBox(
-                        x = 10f,
-                        y = 20f,
-                        width = 100f,
-                        height = 12f
-                    )
-                )
+    private fun pdfChunk(documentId: UUID, chunkIndex: Int) = PdfChunk(
+        id = UUID.randomUUID(),
+        documentId = documentId,
+        chunkIndex = chunkIndex,
+        text = "chunk text $chunkIndex",
+        pageStart = 1,
+        pageEnd = 1,
+        highlightRects = listOf(
+            HighlightRect(
+                pageNumber = 1,
+                bbox = BoundingBox(left = 10f, bottom = 20f, right = 110f, top = 32f)
             )
         )
-    }
+    )
 
     private class RecordingDocumentPersistenceService(
         private val events: MutableList<String>
@@ -280,7 +231,7 @@ class ProcessDocumentServiceTest {
         private val events: MutableList<String>,
         private val parsedPDF: ParsedPDF? = null,
         private val failure: RuntimeException? = null
-    ) : PDFParser() {
+    ) : PDFParser(JsonMapper.builder().build()) {
         var parsedPath: Path? = null
         var parsedDocumentId: UUID? = null
 
@@ -309,10 +260,7 @@ class ProcessDocumentServiceTest {
         private val failure: RuntimeException? = null
     ) : EmbeddingService(
         embeddingClient = NoopEmbeddingClient(),
-        properties = EmbeddingProperties(
-            baseUrl = "http://localhost:11434",
-            model = "test-embedding"
-        )
+        properties = EmbeddingProperties(baseUrl = "http://localhost:11434", model = "test-embedding")
     ) {
         override fun embedPdfChunks(userId: UUID, chunks: List<PdfChunk>): List<EmbeddedChunk> {
             events += "embed"
@@ -346,8 +294,6 @@ class ProcessDocumentServiceTest {
     }
 
     private class NoopEmbeddingClient : EmbeddingClient {
-        override fun embed(texts: List<String>): List<List<Float>> {
-            return emptyList()
-        }
+        override fun embed(texts: List<String>): List<List<Float>> = emptyList()
     }
 }

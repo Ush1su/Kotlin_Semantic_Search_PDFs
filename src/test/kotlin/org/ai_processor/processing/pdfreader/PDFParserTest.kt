@@ -1,107 +1,147 @@
 package org.ai_processor.processing.pdfreader
 
-import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.pdmodel.PDPage
-import org.apache.pdfbox.pdmodel.PDPageContentStream
-import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType1Font
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts
-import java.nio.file.Files
+import org.ai_processor.processing.pdfreader.parsers.CaptionBlockParser
+import org.ai_processor.processing.pdfreader.parsers.TableBlockParser
+import tools.jackson.databind.json.JsonMapper
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PDFParserTest {
-    private val parser = PDFParser()
+    private val jsonMapper = JsonMapper.builder().build()
+    private val parser = PDFParser(jsonMapper)
 
     @Test
-    fun `parse extracts text blocks from a generated multi-page PDF`() {
+    fun `parse extracts document metadata and ordered heading and paragraph blocks from a real PDF`() {
         val documentId = UUID.randomUUID()
-        val pdfPath = createPdf(
-            pages = listOf(
-                listOf("Alpha searchable text", "Beta second line"),
-                listOf("Gamma answer paragraph")
-            )
+
+        val parsedPDF = parser.parse(testDataPath("MIT_LU_LINAL.pdf"), documentId)
+
+        assertEquals(documentId, parsedPDF.documentId)
+        assertEquals(4, parsedPDF.numberOfPages)
+        assertEquals("Factorization into A = LU", parsedPDF.title)
+        assertEquals("Heidi Burgiel", parsedPDF.author)
+        assertTrue(parsedPDF.blocks.isNotEmpty())
+
+        assertEquals(parsedPDF.blocks.indices.toList(), parsedPDF.blocks.map { it.blockIndex })
+        assertTrue(parsedPDF.blocks.all { it.pageNumber in 1..4 })
+        assertTrue(parsedPDF.blocks.all { it.bbox.width > 0f && it.bbox.height > 0f })
+
+        val heading = parsedPDF.blocks.filterIsInstance<HeadingBlock>().first()
+        assertTrue(heading.headingLevel >= 1)
+        assertTrue(heading.text.isNotBlank())
+
+        val paragraph = parsedPDF.blocks.filterIsInstance<ParagraphBlock>().first()
+        assertTrue(paragraph.text.isNotBlank())
+    }
+
+    @Test
+    fun `parse extracts list blocks with items from a real PDF containing lists`() {
+        val parsedPDF = parser.parse(testDataPath("paper_document_encoder.pdf"), UUID.randomUUID())
+
+        val list = parsedPDF.blocks.filterIsInstance<ListBlock>().first()
+
+        assertTrue(list.items.isNotEmpty())
+        assertTrue(list.items.all { it.text.isNotBlank() })
+        assertTrue(list.items.all { it.bbox.width > 0f && it.bbox.height > 0f })
+    }
+
+    @Test
+    fun `parse wraps a failure to read the input file into a PdfParsingException`() {
+        val missingFile = Path.of("test_data/does-not-exist.pdf")
+
+        val exception = kotlin.test.assertFailsWith<PdfParsingException> {
+            parser.parse(missingFile, UUID.randomUUID())
+        }
+
+        assertTrue(exception.message!!.contains(missingFile.toString()))
+        assertIs<Exception>(exception.cause)
+    }
+
+    @Test
+    fun `TableBlockParser maps rows, cells and cross-table links from a table node`() {
+        val node = jsonMapper.readTree(
+            """
+            {
+              "type": "table",
+              "id": 5,
+              "page number": 2,
+              "bounding box": [10.0, 20.0, 100.0, 200.0],
+              "previous table id": 3,
+              "rows": [
+                {
+                  "row number": 0,
+                  "cells": [
+                    {
+                      "row number": 0, "column number": 0, "row span": 1, "column span": 2,
+                      "page number": 2, "bounding box": [10.0, 20.0, 50.0, 200.0],
+                      "kids": [
+                        { "content": "Alpha" },
+                        { "content": "Beta", "kids": [ { "content": "Nested" } ] }
+                      ]
+                    },
+                    {
+                      "row number": 0, "column number": 2, "row span": 1, "column span": 1,
+                      "page number": 2, "bounding box": [50.0, 20.0, 100.0, 200.0],
+                      "kids": []
+                    }
+                  ]
+                }
+              ]
+            }
+            """.trimIndent()
         )
 
-        try {
-            val parsedPDF = parser.parse(pdfPath, documentId)
+        val table = TableBlockParser.parse(node, blockIndex = 0)
 
-            assertEquals(documentId, parsedPDF.documentId)
-            assertEquals(2, parsedPDF.pages.size)
-            assertEquals(1, parsedPDF.pages[0].pageNumber)
-            assertEquals(2, parsedPDF.pages[1].pageNumber)
-            assertEquals(PDRectangle.LETTER.width, parsedPDF.pages[0].width)
-            assertEquals(PDRectangle.LETTER.height, parsedPDF.pages[0].height)
+        assertEquals(5L, table.sourceId)
+        assertEquals(2, table.pageNumber)
+        assertEquals(BoundingBox(10f, 20f, 100f, 200f), table.bbox)
+        assertEquals(3L, table.previousTableId)
+        assertNull(table.nextTableId)
 
-            assertEquals(
-                listOf("Alpha searchable text", "Beta second line"),
-                parsedPDF.pages[0].textBlocks.map { it.text }
-            )
-            assertEquals(
-                listOf("Gamma answer paragraph"),
-                parsedPDF.pages[1].textBlocks.map { it.text }
-            )
-
-            val firstBlock = parsedPDF.pages[0].textBlocks.first()
-            assertEquals(0, firstBlock.blockIndex)
-            assertEquals(1, firstBlock.pageNumber)
-            assertTrue(firstBlock.bbox.x > 0f)
-            assertTrue(firstBlock.bbox.y > 0f)
-            assertTrue(firstBlock.bbox.width > 0f)
-            assertTrue(firstBlock.bbox.height > 0f)
-        } finally {
-            Files.deleteIfExists(pdfPath)
-        }
+        val cells = table.rows.single().cells
+        assertEquals("Alpha Beta Nested", cells[0].text)
+        assertEquals(2, cells[0].columnSpan)
+        assertEquals("", cells[1].text)
+        assertEquals(2, cells[1].columnNumber)
     }
 
     @Test
-    fun `parse preserves caller supplied document id for an empty real PDF`() {
-        val documentId = UUID.randomUUID()
-        val pdfPath = createPdf(pages = listOf(emptyList()))
-
-        try {
-            val parsedPDF = parser.parse(pdfPath, documentId)
-
-            assertEquals(documentId, parsedPDF.documentId)
-            assertEquals(1, parsedPDF.pages.size)
-            assertTrue(parsedPDF.pages.single().textBlocks.isEmpty())
-        } finally {
-            Files.deleteIfExists(pdfPath)
-        }
-    }
-
-    private fun createPdf(pages: List<List<String>>): Path {
-        val pdfPath = Files.createTempFile("ai-pdf-processor-", ".pdf")
-        val font = PDType1Font(Standard14Fonts.FontName.HELVETICA)
-
-        PDDocument().use { document ->
-            pages.forEach { pageLines ->
-                val page = PDPage(PDRectangle.LETTER)
-                document.addPage(page)
-
-                if (pageLines.isNotEmpty()) {
-                    PDPageContentStream(document, page).use { content ->
-                        content.beginText()
-                        content.setFont(font, 12f)
-                        content.newLineAtOffset(72f, 720f)
-
-                        pageLines.forEachIndexed { index, line ->
-                            if (index > 0) {
-                                content.newLineAtOffset(0f, -18f)
-                            }
-                            content.showText(line)
-                        }
-
-                        content.endText()
-                    }
-                }
+    fun `CaptionBlockParser trims content and reads an optional linked content id`() {
+        val withLink = jsonMapper.readTree(
+            """
+            {
+              "type": "caption", "id": 7, "page number": 1,
+              "bounding box": [1.0, 2.0, 3.0, 4.0],
+              "content": "  Figure 1: Diagram  ", "linked content id": 42
             }
-            document.save(pdfPath.toFile())
-        }
+            """.trimIndent()
+        )
+        val withoutLink = jsonMapper.readTree(
+            """
+            {
+              "type": "caption", "page number": 1,
+              "bounding box": [1.0, 2.0, 3.0, 4.0],
+              "content": "Figure 2"
+            }
+            """.trimIndent()
+        )
 
-        return pdfPath
+        val captionWithLink = CaptionBlockParser.parse(withLink, blockIndex = 0)
+        val captionWithoutLink = CaptionBlockParser.parse(withoutLink, blockIndex = 1)
+
+        assertEquals("Figure 1: Diagram", captionWithLink.text)
+        assertEquals(7L, captionWithLink.sourceId)
+        assertEquals(42L, captionWithLink.linkedContentId)
+        assertNull(captionWithoutLink.sourceId)
+        assertNull(captionWithoutLink.linkedContentId)
     }
+
+    private fun testDataPath(fileName: String): Path =
+        Path.of("test_data", fileName)
 }
