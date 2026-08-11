@@ -37,6 +37,8 @@ app:
     model: ${EMBEDDING_MODEL:qwen3-embedding:0.6b}
     dimensions: ${EMBEDDING_DIMENSIONS:512}
     max-concurrent-batches: ${EMBEDDING_MAX_CONCURRENT_BATCHES:1}
+    connect-timeout: ${EMBEDDING_CONNECT_TIMEOUT:10s}
+    read-timeout: ${EMBEDDING_READ_TIMEOUT:2m}
 
   auth:
     dev-user-id: 00000000-0000-0000-0000-000000000001

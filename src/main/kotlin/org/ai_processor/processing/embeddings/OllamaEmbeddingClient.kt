@@ -3,6 +3,7 @@ package org.ai_processor.processing.embeddings
 import org.ai_processor.processing.embeddings.config.EmbeddingProperties
 import org.springframework.stereotype.Component
 import org.springframework.http.MediaType
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 
@@ -13,6 +14,12 @@ class OllamaEmbeddingClient(
 
     private val restClient = RestClient.builder()
         .baseUrl(properties.baseUrl)
+        .requestFactory(
+            SimpleClientHttpRequestFactory().apply {
+                setConnectTimeout(properties.connectTimeout)
+                setReadTimeout(properties.readTimeout)
+            }
+        )
         .build()
 
     override fun embed(texts: List<String>): List<List<Float>> {
@@ -45,7 +52,7 @@ class OllamaEmbeddingClient(
         } catch (exception: RestClientException) {
             throw EmbeddingException(
                 message = "Failed to generate embeddings using model " +
-                        properties.model,
+                        "${properties.model} at ${properties.baseUrl}",
                 cause = exception,
             )
         }

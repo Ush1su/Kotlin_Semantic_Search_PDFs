@@ -1,5 +1,6 @@
 package org.ai_processor.processing.pdfreader
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import java.util.UUID
 
 data class ParsedPDF(
@@ -95,9 +96,11 @@ data class BoundingBox(
     val right: Float,
     val top: Float
 ) {
+    @get:JsonIgnore
     val width: Float
         get() = right - left
 
+    @get:JsonIgnore
     val height: Float
         get() = top - bottom
 }

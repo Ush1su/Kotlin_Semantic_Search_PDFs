@@ -11,11 +11,21 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+
+    maven {
+        name = "veraPdf"
+        url = uri("https://artifactory.openpreservation.org/artifactory/vera-dev")
+
+        content {
+            includeGroup("org.verapdf")
+        }
+    }
 }
 
 dependencies {
     testImplementation(kotlin("test"))
     implementation("org.apache.pdfbox:pdfbox:3.0.7")
+    implementation("org.opendataloader:opendataloader-pdf-core:2.5.0")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-mustache")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
