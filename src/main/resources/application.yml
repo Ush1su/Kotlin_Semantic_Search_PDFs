@@ -9,11 +9,16 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${HIBERNATE_FORMAT_SQL:true}
+
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_SIZE:50MB}
+      max-request-size: ${MAX_UPLOAD_SIZE:50MB}
 
 app:
   storage:
@@ -41,7 +46,7 @@ app:
     read-timeout: ${EMBEDDING_READ_TIMEOUT:2m}
 
   auth:
-    dev-user-id: 00000000-0000-0000-0000-000000000001
+    dev-user-id: ${DEV_USER_ID:00000000-0000-0000-0000-000000000001}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
