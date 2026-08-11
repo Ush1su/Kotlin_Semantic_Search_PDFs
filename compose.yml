@@ -52,8 +52,6 @@ services:
     restart: "no"
 
   app:
-    profiles:
-      - full
     build:
       context: .
       dockerfile: Dockerfile

@@ -1,0 +1,17 @@
+# Keep the build context small: node_modules alone is ~160 MB and the Node
+# stage reinstalls from the lockfile anyway.
+frontend/node_modules
+frontend/dist
+
+build
+.gradle
+.kotlin
+temp
+
+# Uploaded PDFs and their derived data belong to a running instance.
+data
+
+.git
+.idea
+*.env
+!*.env.example
